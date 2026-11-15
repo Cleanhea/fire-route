@@ -33,6 +33,7 @@ try {
   if(secure){const cert=new X509Certificate(await readFile(join(root,'.runtime/tls/server.crt')));
     trustedSPKI=createHash('sha256').update(cert.publicKey.export({type:'spki',format:'der'})).digest('base64');}
   browser=await launchChrome({trustedSPKI});summary.browser=browser.version.product;
+  summary.font_configuration=browser.fontConfiguration;
   summary.transport=secure?'HTTPS_LOCAL_CERTIFICATE_PINNED_IN_TEST_PROFILE':'HTTP_LOOPBACK_DEV';
   phase='NAVIGATION';
   responder=await page(browser,origin);
@@ -147,7 +148,7 @@ try {
   await save('meta.json',{origin,input:'SYNTHETIC',MEC:'unavailable',Hosted:'NOT_CONTACTED',
     capture:'REAL_CHROME_RENDERING_NOT_HTTP_ONLY',credentials:'NEVER_EXPORTED',
     source_sha256:createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex'),
-    driver_sources:Object.fromEntries(await Promise.all(['dashboard.mjs','cdp.mjs','controls.mjs','record.mjs'].map(async name=>
+    driver_sources:Object.fromEntries(await Promise.all(['dashboard.mjs','cdp.mjs','controls.mjs','record.mjs','fonts.mjs'].map(async name=>
       [name,createHash('sha256').update(await readFile(new URL(name,import.meta.url))).digest('hex')])))});
   console.log(JSON.stringify({...summary,evidence:directory}));
 }

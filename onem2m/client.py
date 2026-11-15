@@ -47,8 +47,9 @@ class RejectRedirect(request.HTTPRedirectHandler):
 
 
 class HTTPTransport:
-    def __init__(self):
-        self.opener = request.build_opener(RejectRedirect(), request.HTTPSHandler(context=ssl.create_default_context()))
+    def __init__(self, *, tls_context=None):
+        self.opener = request.build_opener(RejectRedirect(), request.HTTPSHandler(context=
+            tls_context if tls_context is not None else ssl.create_default_context()))
 
     def __call__(self, method: str, url: str, headers: dict, body: bytes | None, timeout: float) -> WireResponse:
         req = request.Request(url, data=body, headers=headers, method=method)
@@ -77,17 +78,25 @@ def strict_json(data: bytes | str):
 
 class CSEClient:
     def __init__(self, url: str, originator: str, release: str, *, timeout: float = 5,
-                 transport: Callable | None = None, evidence=None, actor: str = "bootstrap"):
+                 transport: Callable | None = None, evidence=None, actor: str = "bootstrap",
+                 actor_transport: Callable | None = None):
         self.url = http_url(url, "CSE_BASE_URL")
         if not originator or any(c in originator for c in "\r\n"):
             raise ValueError("Invalid originator")
         self.originator, self.release, self.timeout = originator, release, timeout
         self.transport = HTTPTransport() if transport is None else transport
         self.evidence, self.actor = evidence, actor
+        self.actor_transport = actor_transport
 
     def for_actor(self, originator: str, actor: str) -> "CSEClient":
+        # An authenticated profile must select that actor's credentials. Never
+        # silently retain the bootstrap/admin certificate for a different AE.
+        transport = self.actor_transport(originator, actor) if self.actor_transport else self.transport
+        if self.actor_transport and transport is None:
+            raise ValueError('Actor credential transport unavailable; fallback rejected')
         return CSEClient(self.url, originator, self.release, timeout=self.timeout,
-                         transport=self.transport, evidence=self.evidence, actor=actor)
+                         transport=transport, evidence=self.evidence, actor=actor,
+                         actor_transport=self.actor_transport)
 
     def _request(self, method: str, path: str, resource_type: int | None = None, payload: dict | None = None,
                  *, aggregate: bool = False, query: dict | None = None) -> dict:

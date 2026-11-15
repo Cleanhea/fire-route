@@ -102,6 +102,8 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Judge evidence: transport configuration/connection proof, ACP read-back and positive/negative outputs.
 - Current status: PARTIAL: actual scoped ACP denials and role API restrictions pass; T27 resolves the observed default-key warning for controlled local restart. T34 now passes eight actual checks with TLS 1.3, trusted CA/hostname, untrusted-CA rejection, role sessions/cookie flags/CSP; HTTPS Chrome also passes 20 checks. This secures browser-to-API transport, while CSE/MQTT actor identities remain header-based/anonymous. Full originator binding/TLS and an Expert award remain unproven.
 
+  New T36 implementation adds a separate certificate-bound CSE gateway and actor-specific verified TLS transport. Crypto/unit/static checks pass; the actual NGINX/CSE gate is Docker-BLOCKED and the normal demo/MQTT/callback paths are not migrated. Do not upgrade this row to verified CSE authentication or an Expert score before the real test passes.
+
 ### 11. Data Interoperability and Discoverability — selected, tiered scope
 
 - Official Expert: advanced semantics, including SAREF, or SDT data models from TS-0023.
@@ -154,7 +156,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: actual catalog/OpenAPI inventory, official compatible IPE/mapping, correlated observation/request/result resources; no invented write operations.
 - Verify: T11; separate direction/service traces for any expanded Expert-level claim.
 - Judge evidence: discovery/configuration calls, MEC responses/notifications, CSE resources and consuming application's reaction.
-- Current status: NOT_STARTED / NOT_RUN. Gap: direct MEC calls are Emerging; one non-location service through oneM2M is Proficient; multiple services and bidirectionality are unverified.
+- Current status: IMPLEMENTED_UNVERIFIED for the bounded T37 MEC011 discovery client/application-AE catalog bridge; absent endpoint/account means the actual probe is BLOCKED before network. It is not the standardized MEC-IPE, runtime service consumption or deployment proof. Direct-call/lower-tier criteria and oneM2M-mediated/multiple-service/bidirectional evidence remain separate; no score is claimed.
 
 ### 17. AI Agents & MCP Integration — conditional
 

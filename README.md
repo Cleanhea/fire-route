@@ -2,6 +2,19 @@
 
 **FireRoute: Intelligent Fire Evacuation and Rescue Guidance System**
 
+Latest local implementation: an opt-in [certificate-bound CSE profile](docs/SECURITY.md), MEC011 discovery/application-AE catalog bridge, and private Korean fonts for Chrome are implemented. Python 360/browser-driver 25 cases pass; actual NGINX/CSE security, new rendered-font output and MEC endpoint integration still need their real gates. Baseline a66059f retains the earlier 19-stage actual acceptance; it does not verify later source changes. Git push and clean-commit execution are currently blocked in the agent environment. See [STATUS](docs/STATUS.md).
+
+~~~bash
+# Actual isolated mTLS/AE-identity/ACP/CIN/SUB gate; normal demo stays separate.
+make p1-cse-security
+make cse-security-down
+
+# Requires an actual configured MEC011 endpoint; missing endpoint reports BLOCKED.
+make mec-discover
+# Optional existing dedicated CNT: see DEPLOYMENT.md and .env.example.
+make mec-catalog-to-cse
+~~~
+
 A simulation-based PoC for the 2026 oneM2M × ETSI MEC international hackathon. GitHub repository and checkout directory: **fire-route**. Repository: [gaevalja/fire-route](https://github.com/gaevalja/fire-route).
 
 > Local acceptance checkpoint (2026-11-16 KST): the user's `make verify-local` passes all 19 stages, including actual CSE/Group/device ACKs, MQTT/discovery, HTTP and HTTPS rendered Chrome checks, and certificate/role verification. The working-tree source manifest and original evidence are indexed in [STATUS](docs/STATUS.md). Clean-commit reproduction, video/article publication and MEC remain separate unfinished work. [Submission artifacts](docs/submission/README.md) are prepared locally.

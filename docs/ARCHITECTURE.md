@@ -1,5 +1,9 @@
 # FireRoute architecture and module contracts
 
+Latest implemented extension: onem2m.security adds verified client-certificate transport and CSEClient.for_actor supports an explicit credential factory with no admin/unauthenticated fallback. The separate compose.cse-security.yaml places NGINX mTLS identity binding before the real private ACME CSE, with a separate callback relay/network/volumes; it never implements CSE resources. See [SECURITY](SECURITY.md) for trust boundaries and the still-unverified actual gate. The ordinary selected demo remains on its existing profile.
+
+mec.catalog implements only the inspected MEC011 service-availability GET and a safe discovery-metadata projection; mec.probe optionally publishes it into an existing dedicated actual CSE CNT, verifies the CIN read-back and labels it APPLICATION_AE_BRIDGE_NOT_MEC_IPE. It does not claim MEC app lifecycle, MN-to-IN registration, MEC013/033/046 support, risk-engine placement or standardized IPE behavior. Account/Sandbox access is absent; no MEC environment was contacted. Contracts/config/commands are in [DEPLOYMENT](DEPLOYMENT.md). New unit/static success does not supersede the previous actual run's source identity.
+
 ## 1. Status and deployment choice
 
 Selected scenario update: use the preserved fire_evac engine, floors 1–10 plus roof/162 zones, under simulator/scenarios/fire_evac/. SCENARIO.md and EVACUATION_MODEL.md define source rules and added assumed movement policy. Selected core and role HTTP/CSE baseline gates passed, including the 18-check historical-data gate on 2026-11-12. Existing three-floor code/evidence remain regressions. The natural-hazard actual CSE/core gate also passed on 2026-11-14: 729 source frames/notifications and five Group/ACK scenarios. Hazard browser and full recovery checks remain open. The MEC target below remains unimplemented.

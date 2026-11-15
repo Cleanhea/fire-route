@@ -3,6 +3,7 @@ import {spawn} from 'node:child_process';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {prepareFonts} from './fonts.mjs';
 
 export class PipeMessages {
   constructor(send) {this.send=send;this.id=0;this.pending=new Map();this.buffer='';this.events=[];this.listeners=new Map();}
@@ -34,13 +35,15 @@ export class PipeMessages {
 
 export async function launchChrome({trustedSPKI}={}) {
   const profile=await mkdtemp(join(tmpdir(),'fire-route-browser-'));
+  let fonts;
+  try{fonts=await prepareFonts(profile);}catch(error){await rm(profile,{recursive:true,force:true});throw error;}
   const chrome=process.env.CHROME_BIN||'google-chrome';
   // Preserve Chrome sandbox; there is deliberately no --no-sandbox option.
   if(trustedSPKI && !/^[A-Za-z0-9+/]{43}=$/.test(trustedSPKI))throw new Error('Invalid local certificate SPKI');
   const child=spawn(chrome,['--headless=new','--remote-debugging-pipe',`--user-data-dir=${profile}`,
     '--no-first-run','--no-default-browser-check','--disable-background-networking',
     '--disable-sync','--disable-component-update',...(trustedSPKI?[`--ignore-certificate-errors-spki-list=${trustedSPKI}`]:[]),'about:blank'],
-    {stdio:['ignore','ignore','pipe','pipe','pipe'],env:{...process.env,XDG_CONFIG_HOME:profile,XDG_CACHE_HOME:profile}});
+    {stdio:['ignore','ignore','pipe','pipe','pipe'],env:{...process.env,...fonts.environment,XDG_CONFIG_HOME:profile,XDG_CACHE_HOME:profile}});
   let startupFailure=false;
   child.on('error',()=>{startupFailure=true;protocol.close();});
   const protocol=new PipeMessages(data=>child.stdio[3].write(data));
@@ -55,7 +58,7 @@ export async function launchChrome({trustedSPKI}={}) {
     if(child.exitCode===null)child.kill('SIGTERM');
     protocol.close();await rm(profile,{recursive:true,force:true,maxRetries:3});
   };
-  try {const version=await protocol.request('Browser.getVersion');return {protocol,version,close};}
+  try {const version=await protocol.request('Browser.getVersion');return {protocol,version,close,fontConfiguration:fonts.mode};}
   catch{await close();throw new Error('Chrome startup unavailable; install Chrome/Chromium and enable its sandbox');}
 }
 

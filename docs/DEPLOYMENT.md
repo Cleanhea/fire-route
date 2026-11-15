@@ -4,6 +4,26 @@ Latest scope: the user chose local completion on 2026-11-15. [LOCAL_ACCEPTANCE](
 
 ## 1. Current execution gate and source requirements
 
+Local implementation update, 2026-11-16: the user requested the remaining CSE/MEC work, then confirmed that no ETSI account/Sandbox/repository access is ready and selected local implementation first. No Hosted contact/deployment is performed. [SECURITY](SECURITY.md) documents the separate certificate-bound CSE gate. The following MEC011 adapter is prepared for an actual acquired endpoint; it does not install a local MEC platform or implement the official MEC-IPE.
+
+### Prepared MEC011 discovery and application-AE bridge
+
+Set the exact MEC_SERVICE_MGMT_URL ending in /mec_service_mgmt/v1 from the actual environment. MEC_ENVIRONMENT must be local-sandbox or hosted-sandbox. Optional MEC_APPLICATION_INSTANCE_ID must be the platform-assigned ID, never an invented deployment result. A private MEC_API_TOKEN_FILE and optional MEC_CA_FILE supply credentials/trust externally; Hosted or bearer-authenticated requests require HTTPS. Local/Hosted settings are independent of the default application's MEC_MODE=unavailable. No configured endpoint means BLOCKED without a network call.
+
+~~~bash
+# .env is parsed as data; process environment overrides it.
+make mec-discover
+
+# Optional: persist a real discovery observation into an existing dedicated CSE CNT.
+make mec-catalog-to-cse
+~~~
+
+The adapter uses the inspected MEC011 Service Management /services or /applications/{appInstanceId}/services GET operation. Its compatible structural subset references the official v2.0.9 OpenAPI; the actual environment's version/capabilities still require verification. A real HTTP 200 and valid bounded ServiceInfo list are required. No redirect, login HTML, fabricated service or unit fixture satisfies the actual CLI gate. An empty real catalog stays empty. Only service name/version/state/serializer/identity and bounded transport descriptors are retained; endpoints, OAuth/security blocks and arbitrary response fields are omitted. Response hash and observation time preserve provenance without publishing credentials.
+
+For CSE storage configure CSE_BASE_URL/CSE_ORIGINATOR/CSE_RELEASE and MEC_CSE_TARGET_CONTAINER. The target must already be an actual dedicated CNT labeled fire-route:mec-catalog, owned by the authorized application AE. Provision it through the real CSE and retain its returned IDs; do not point the bridge at telemetry/routes/commands. Optional CSE_CA_FILE/CSE_CLIENT_CERT/CSE_CLIENT_KEY enable the verified mTLS transport where deployed. The bridge verifies the actual CNT, performs one CIN CREATE and reads back the same RI/content. An uncertain CREATE is not automatically replayed. This is an application AE publishing a MEC observation, explicitly APPLICATION_AE_BRIDGE_NOT_MEC_IPE; it is not the standardized MEC-IPE mapping and does not prove MEC app placement/VM lifecycle, MEC013/033/046 or risk-engine use of those services.
+
+The reference operation and ServiceInfo subset were inspected in [ETSI's official OpenAPI history](https://forge.etsi.org/rep/mec/gs011-app-enablement-api/-/blame/1ba59e805a8db00dfb162001e0048903406d544c/MecServiceMgmtApi.yaml/streaming). The organizer STF_685 deployment tree/raw guide and TR-0086 body remained unreadable with the research tool. This does not establish a specific permission/server failure. User access prerequisites are separately confirmed absent. Do not install guessed charts, assume Kubernetes privileges or infer Option C support from this client.
+
 The user changed the strategy on 2026-11-14: Phase 1 completes the current WSL2/Docker/actual ACME system; Phase 2 prepares portable components/configuration/interfaces locally. Phase 3 may access or deploy to the organizer Hosted MEC Sandbox only after a separate explicit user instruction. No Hosted URL probe, login, OAuth flow, namespace/API enumeration or deployment is performed now. Public reference documentation can be read. Phase 4 must submit a functioning local system by Nov 20 even if MEC is incomplete. See ADR-019 and ROADMAP.md; historical P0–P4 references are traceability labels.
 
 The organizer-notice descriptions (ETSI/OAuth login, personal sandbox, per-user Kubernetes namespace, limited platform administration) are user supplied and unverified in the actual environment. Local Sandbox installation is described as officially recommended; it is an optional future reference environment, not a prerequisite for current work. The rest of this document is a conditional future runbook, not evidence of an installed topology or permission to execute it.

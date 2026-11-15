@@ -111,6 +111,7 @@ access-codes:
 test-browser-driver:
 	node tests/browser/cdp.test.mjs
 	node tests/browser/controls.test.mjs
+	node tests/browser/fonts.test.mjs
 
 test-browser:
 	node tests/browser/dashboard.mjs
@@ -143,6 +144,23 @@ verify-local:
 
 verify-clean:
 	$(PYTHON) -m infra.local_release --clean-checkout
+
+.PHONY: cse-mtls-files p1-cse-security cse-security-down
+cse-mtls-files:
+	$(PYTHON) -m infra.cse.pki
+
+p1-cse-security: cse-mtls-files
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose -p fire-route-security -f compose.cse-security.yaml up --build --abort-on-container-exit --exit-code-from secure-check
+
+cse-security-down:
+	docker compose -p fire-route-security -f compose.cse-security.yaml down
+
+.PHONY: mec-discover mec-catalog-to-cse
+mec-discover:
+	$(PYTHON) -m mec.probe
+
+mec-catalog-to-cse:
+	$(PYTHON) -m mec.probe --persist-onem2m
 
 demo-up: access-codes
 	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile dashboard up -d --build cse app

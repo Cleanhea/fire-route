@@ -123,3 +123,24 @@ jobs:
           if-no-files-found: warn
       - if: always()
         run: make down standards-down
+
+  cse-certificate-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: make p1-cse-security
+      - name: Save security results only; never CA/client private keys
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cse-certificate-security-results
+          path: |
+            evidence/**/summary.json
+            evidence/**/assertions.json
+            evidence/**/gateway-denials.json
+          if-no-files-found: warn
+      - if: always()
+        run: make cse-security-down

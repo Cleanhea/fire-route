@@ -2,6 +2,8 @@
 
 Planning baseline: 2026-11-11; progress updated 2026-11-16 (Asia/Seoul).
 
+Current remaining-work increment: baseline a66059f is committed, but GitHub DNS/Docker permissions block the agent's push/clean run. The user has no ETSI access and selected local implementation first. T36 certificate-bound CSE gateway, T37 MEC011 discovery/application-AE catalog storage and private Korean fonts are implemented with local crypto/unit/static checks; actual new security/MEC/renderer gates remain unverified. Prioritize user-terminal make p1-cse-security, affected make test-browser/full acceptance, then reviewed commit/clean reproduction and submission capture. Do not treat the earlier 19-stage baseline as a PASS for the new source or install a guessed MEC platform. See SECURITY.md and DEPLOYMENT.md.
+
 ## 1. Fixed dates and scope
 
 - 2026-11-20: functioning selected system and all final deliverables submitted.

@@ -10,6 +10,10 @@ Next freeze the reviewed implementation in a commit, then run make verify-clean.
 
 ## Prerequisites and normal operation
 
+New optional increments after baseline a66059f: make p1-cse-security is an isolated T36 actual certificate-bound CSE gate described in [SECURITY](SECURITY.md). make mec-discover / make mec-catalog-to-cse are T37, described in [DEPLOYMENT](DEPLOYMENT.md); absent a real configured MEC endpoint they are BLOCKED, not skipped successes. These gates are not silently added to or passed by the original 19-step result. CSE client/provenance/browser code has changed, so rerun affected real acceptance on the new source before a release.
+
+The Chrome driver can copy an existing Noto Korean font into its disposable profile and use a private Fontconfig file. On this WSL machine it finds /mnt/c/Windows/Fonts/NotoSansKR-VF.ttf; an operator may explicitly set FIREROUTE_KOREAN_FONT=/absolute/font.ttf before a browser command. System fonts and the original font are unchanged, no font binary enters Git, and profile deletion removes the temporary copy. Summary font_configuration says PRIVATE_KOREAN_FONT or SYSTEM_FONTS_ONLY_REQUIRES_VISUAL_REVIEW. Actual font resolution/coverage and two unit fixtures pass; rerun/inspect the rendered PNGs before claiming readable captures. No sandbox/TLS bypass is introduced.
+
 Use Docker with Compose supporting !override (>=2.24.4), Node as recorded in .node-version, host Python >=3.10 for orchestration and Python 3.12 in product containers. The browser gate requires Google Chrome/Chromium with a working sandbox. Set CHROME_BIN to the executable if it is not google-chrome. OpenSSL generates the optional local development CA. FFmpeg with libx264 is optional for screen-video encoding. No npm dependencies are needed for the CDP driver. The optional standards image alone installs paho-mqtt==2.1.0; its isolated broker is eclipse-mosquitto:2.0.22. See DECISIONS for reasons/source verification and remaining lock limitations.
 
 ~~~bash
