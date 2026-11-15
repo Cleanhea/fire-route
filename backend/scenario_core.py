@@ -13,11 +13,12 @@ from backend.evidence import Evidence,source_identity
 from backend.notifications import NotificationService,NotificationStore,notification_server
 from backend.p0 import IntegrationBlocked,ROOT,subscription_refs,wait_for_cse
 from backend.scenario_ingestion import IngestionResult,accept_live_frame
+from backend.scenario_input import PendingInput
 from onem2m.bootstrap import bootstrap
 from onem2m.client import CSEClient,CSEError,ProtocolError,strict_json
 from simulator.evacuation import Evacuation
 from simulator.events import utc_now
-from simulator.scenario_frames import ScenarioFrame,emission,read_trace,source_manifest,trace_digest
+from simulator.scenario_frames import ScenarioFrame,read_trace,source_manifest,trace_digest
 
 
 class ScenarioSession:
@@ -30,6 +31,7 @@ class ScenarioSession:
         self.model = Evacuation()
         self.server = self.worker = self.delivery = None
         self.frames = 0
+        self.pending_input = None
         self.admin = CSEClient(settings.cse_url,settings.admin_originator,settings.release,
             timeout=settings.request_timeout,evidence=self.evidence)
 
@@ -65,18 +67,17 @@ class ScenarioSession:
         self.evidence.write('navigation.json',self.model.navigation.document())
 
     def accept_raw(self,raw):
-        frame = emission(raw,self.incident_id,self.namespace+':scenario-replay',self.hash)
+        if self.pending_input is None:
+            self.pending_input=PendingInput(raw,self.incident_id,self.namespace+':scenario-replay',self.hash)
+        elif not self.pending_input.matches(raw):
+            raise ProtocolError('Resolve the pending source frame before advancing the trace')
         parent = self.resources['containers']['sensor/telemetry']['path']
-        name = 'frame-'+str(frame.data['sequence'])
-        body = frame.to_dict()
         sensor = self.clients['sensor']
-        cin = sensor.ensure(parent,4,{'rn':name,'cnf':'application/json:0','con':json.dumps(body,separators=(',',':'))})
-        actual = sensor.resource(sensor.retrieve(parent+'/'+name),4)
-        if actual['ri'] != cin['ri'] or strict_json(actual['con']) != body:
-            raise ProtocolError('Actual scenario CIN read-back differs')
-        receipt=self.consume_received(frame,cin['ri'])
+        frame,actual=self.pending_input.deliver(sensor,parent,self.settings,self.evidence)
+        receipt=self.consume_received(frame,actual['ri'])
         if receipt.state!='ACCEPTED':
             raise ProtocolError('New actual frame did not advance the controller')
+        self.pending_input=None
 
     def consume_received(self,frame,cin_ri):
         """Consume a matching durable real callback; never publish on rejection/replay."""

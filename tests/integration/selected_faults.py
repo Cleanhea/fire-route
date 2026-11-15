@@ -77,14 +77,16 @@ def disconnected_read_clients(session,url):
 
 
 class RoleProbe:
-    def __init__(self,session):
+    def __init__(self,session,*,app=None,actions=()):
         self.session=session;self.cookies={};self.origin='http://127.0.0.1'
-        self.app=ScenarioApp(session.settings,Path('unused-test-trace'))
-        self.app.context=session;self.app.busy=False;self.app.state='READY';self.app.paused=True
+        self.actions=frozenset(actions)
+        self.app=app if app is not None else ScenarioApp(session.settings,Path('unused-test-trace'))
+        if app is None:
+            self.app.context=session;self.app.busy=False;self.app.state='READY';self.app.paused=True
         codes={role:secrets.token_urlsafe(24) for role in ['resident','responder']}
         session.evidence.secret_values+=tuple(codes.values())
         auth=AuthStore({role:digest(code) for role,code in codes.items()})
-        self.server=api_server('127.0.0.1',0,self.app,auth,self.origin,ROOT/'frontend/scenario',actions=set(),snapshots=True)
+        self.server=api_server('127.0.0.1',0,self.app,auth,self.origin,ROOT/'frontend/scenario',actions=self.actions,snapshots=True)
         self.url=self.origin+':'+str(self.server.server_address[1])
         self.worker=Thread(target=self.server.serve_forever,daemon=True);self.worker.start()
         session.evidence.write('linked-http-audit.json',{'evidence':str(self.app.audit_evidence.path)})
@@ -103,7 +105,9 @@ class RoleProbe:
         with response:
             data=strict_json(response.read(1024*1024))
             self.session.evidence.append('http.jsonl',{'method':method,'path':path,'role':role,'http_status':response.status})
-            if response.status!=expected:raise AssertionError('Unexpected fault-check HTTP status')
+            if response.status!=expected:
+                raise AssertionError('Unexpected fault-check HTTP status '+str(response.status)
+                    +' (expected '+str(expected)+') at '+method+' '+path)
             if response.headers.get('Set-Cookie'):
                 self.cookies[role]=response.headers['Set-Cookie'].split(';',1)[0]
             return data

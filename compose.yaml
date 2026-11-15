@@ -148,6 +148,43 @@ services:
       - ./evidence:/app/evidence
       - cse-metadata:/metadata:ro
       - ./.runtime/fire-evac-faults.jsonl:/run/fire-route/faults.jsonl:ro
+  scenario-recovery:
+    profiles: ["recovery"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_recovery"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      <<: *core_environment
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+      NOTIFICATION_PUBLIC_URL: http://scenario-recovery:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/recovery.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-recovery.jsonl:/run/fire-route/recovery.jsonl:ro
+  scenario-latency:
+    profiles: ["latency"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_latency"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+      NOTIFICATION_PUBLIC_URL: http://scenario-latency:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/latency.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-latency.jsonl:/run/fire-route/latency.jsonl:ro
   scenario-app:
     profiles: ["scenario-demo"]
     build: *core_build

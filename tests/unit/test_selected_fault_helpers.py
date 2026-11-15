@@ -1,15 +1,52 @@
 """Fault harness fixtures only; no CSE or socket communication success claimed."""
 import json
+from io import BytesIO
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock,patch
 
-from tests.integration.selected_faults import DisconnectEndpoint,callback,disconnected_read_clients,records,run
+from tests.integration.selected_faults import DisconnectEndpoint,RoleProbe,callback,disconnected_read_clients,records,run
 
 
 class FaultHarnessTests(unittest.TestCase):
+    def private_probe_handler(self,*,role='responder',actions=None):
+        session=SimpleNamespace(settings=SimpleNamespace(),evidence=Mock(secret_values=()))
+        app=Mock();app.audit_evidence.path=Path('unit-audit');auth=Mock();auth.role.return_value=role
+        with patch('backend.http_api.ThreadingHTTPServer') as server, \
+                patch('tests.integration.selected_faults.Thread'), \
+                patch('tests.integration.selected_faults.AuthStore',return_value=auth), \
+                patch.object(RoleProbe,'call'):
+            server.return_value.server_address=('127.0.0.1',12345)
+            probe=RoleProbe(session,app=app,**({'actions':actions} if actions is not None else {}))
+            cls=server.call_args.args[1];probe.close()
+        handler=object.__new__(cls);handler.path='/api/v1/scenario';handler.send=Mock()
+        handler.headers={'Host':'127.0.0.1','Origin':'http://127.0.0.1','Content-Type':'application/json'}
+        handler.connection=Mock();handler.token=Mock(return_value='unit-cookie')
+        return probe,handler,app
+
+    def post_action(self,handler,action):
+        data=json.dumps({'action':action}).encode();handler.rfile=BytesIO(data)
+        handler.headers['Content-Length']=str(len(data));handler.do_POST()
+        return handler.send.call_args.args[0]
+
+    def test_recovery_probe_step_reaches_production_API_enqueue(self):
+        probe,handler,app=self.private_probe_handler(actions={'step'})
+        self.assertEqual(probe.actions,frozenset({'step'}));self.assertEqual(self.post_action(handler,'step'),202)
+        app.enqueue.assert_called_once_with('step')
+
+    def test_default_fault_probe_remains_read_only(self):
+        probe,handler,app=self.private_probe_handler()
+        self.assertEqual(probe.actions,frozenset());self.assertEqual(self.post_action(handler,'step'),400)
+        app.enqueue.assert_not_called()
+
+    def test_recovery_step_still_requires_responder_and_denies_other_actions(self):
+        _,handler,app=self.private_probe_handler(role='resident',actions={'step'})
+        self.assertEqual(self.post_action(handler,'step'),403);app.enqueue.assert_not_called()
+        _,handler,app=self.private_probe_handler(actions={'step'})
+        self.assertEqual(self.post_action(handler,'reset'),400);app.enqueue.assert_not_called()
+
     def test_partial_final_evidence_line_is_not_mistaken_for_received_callback(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'rows.jsonl'

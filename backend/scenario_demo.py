@@ -15,7 +15,7 @@ from backend.evidence import Evidence
 from backend.http_api import api_server
 from backend.scenario_core import ScenarioSession
 from backend.views import latest,unknown_view
-from onem2m.client import ProtocolError,strict_json
+from onem2m.client import ProtocolError,TransportError,strict_json
 from simulator.commands import utc_time
 from simulator.scenario_frames import ROOT,ScenarioFrame,read_trace,trace_digest
 
@@ -26,6 +26,10 @@ class ScenarioApp:
         self.context = None
         self.lock = Lock();self.jobs = queue.Queue(maxsize=1);self.stop = Event()
         self.busy,self.paused,self.state = True,True,'INITIALIZING'
+        self.pending_raw=None
+        self.remaining=self.advanced=0
+        self.recovery_deadline=None
+        self.resume_after_recovery=False
         self.audit_evidence = Evidence(settings.evidence_root)
         from mec.risk.evacuation import Navigation
         self.building = Navigation().document()
@@ -42,6 +46,8 @@ class ScenarioApp:
     def enqueue(self,action):
         with self.lock:
             if self.busy:raise RuntimeError('Busy')
+            if self.state in {'RECOVERING','DEGRADED'} and action!='reset':
+                raise RuntimeError('Pending recovery or explicit reset required')
             self.busy = True
             self.jobs.put_nowait(action)
             return 'scenario-'+str(time.monotonic_ns())
@@ -51,6 +57,7 @@ class ScenarioApp:
             raise PermissionError('Responder required')
         with self.lock:context,busy,state = self.context,self.busy,self.state
         if context is None or incident != context.incident_id:raise LookupError('Unknown incident')
+        if state=='RECOVERING':raise TransportError('Source communication recovery pending')
         if state=='DEGRADED':return unknown_view(incident,cse='UNKNOWN')
         client = context.clients[role]
         route = latest(client,context.resources,'controller/routes')
@@ -175,29 +182,62 @@ class ScenarioApp:
             context.accept_raw(next(trace));context.publish()
         except Exception:
             context.close();raise
-        with self.lock:self.context,self.iterator,self.paused = context,trace,True
+        with self.lock:
+            self.context,self.iterator,self.paused = context,trace,True
+            self.pending_raw=None;self.remaining=self.advanced=0
+            self.recovery_deadline=None;self.resume_after_recovery=False
 
-    def run(self):
-        action = 'reset'
+    def advance(self,count=1,*,recovering=False):
+        """Preserve the source cursor/batch across bounded input transport loss."""
+        if recovering:
+            if self.recovery_deadline is None or time.monotonic()>=self.recovery_deadline:
+                raise ProtocolError('Source recovery deadline exceeded; explicit reset required')
+        else:
+            if self.pending_raw is not None or self.remaining:
+                raise ProtocolError('Pending source input requires recovery or explicit reset')
+            self.remaining=count;self.advanced=0
+            self.resume_after_recovery=not self.paused
+        exhausted=False
+        while self.remaining and not self.stop.is_set():
+            if self.pending_raw is None:self.pending_raw=next(self.iterator,None)
+            if self.pending_raw is None:
+                self.remaining=0;exhausted=True;break
+            try:self.context.accept_raw(self.pending_raw)
+            except TransportError:
+                if self.recovery_deadline is None:
+                    # Reuse the configured bounded CSE readiness budget; every
+                    # attempt also retains its configured request deadline.
+                    self.recovery_deadline=time.monotonic()+self.settings.startup_timeout
+                    self.audit_evidence.event(hop='source_recovery_started',incident_id=self.context.incident_id,
+                        simulation_second=self.pending_raw['simulation_second'],budget_seconds=self.settings.startup_timeout)
+                self.paused=True
+                return 'RECOVERING'
+            self.pending_raw=None;self.remaining-=1;self.advanced+=1
+        if self.stop.is_set():return 'STOPPING'
+        # Dispatch/partial fan-out errors deliberately remain fail-closed. They
+        # require a separate outbox protocol, not a blind retry of publish().
+        if self.advanced:self.context.publish()
+        if self.recovery_deadline is not None:
+            self.audit_evidence.event(hop='source_recovery_completed',incident_id=self.context.incident_id,
+                route_version=self.context.model.last['sequence'])
+        self.paused=exhausted or not self.resume_after_recovery
+        self.recovery_deadline=None;self.advanced=0
+        return 'TRACE_EXHAUSTED' if exhausted else 'READY'
+
+    def run(self,initial_action='reset'):
+        action = initial_action
         while not self.stop.is_set():
             try:
-                exhausted = False
+                state='READY'
                 if action=='reset':self.reset()
                 elif action=='pause':self.paused=True
                 elif action=='resume':self.paused=False
+                elif action=='recover_pending':state=self.advance(recovering=True)
                 else:
-                    advanced = 0
                     if action=='stop_display_c' and self.context.delivery.processes['display-c'].is_alive():
                         self.context.delivery.stop_device('display-c')
-                    for _ in range(30 if action=='advance_30' else 1):
-                        if self.stop.is_set():break
-                        raw = next(self.iterator,None)
-                        if raw is None:
-                            self.paused=True;exhausted=True;break
-                        self.context.accept_raw(raw)
-                        advanced += 1
-                    if advanced:self.context.publish()
-                with self.lock:self.state='TRACE_EXHAUSTED' if exhausted else 'READY'
+                    state=self.advance(30 if action=='advance_30' else 1)
+                with self.lock:self.state=state
             except Exception as exc:
                 self.paused = True
                 self.audit_evidence.event(hop='selected_action_failed',action=action,error=type(exc).__name__)
@@ -208,8 +248,8 @@ class ScenarioApp:
             while not self.stop.is_set():
                 try:action=self.jobs.get(timeout=.1);break
                 except queue.Empty:
-                    if not self.paused and time.monotonic()>=deadline:
-                        action='step'
+                    if (self.state=='RECOVERING' or not self.paused) and time.monotonic()>=deadline:
+                        action='recover_pending' if self.state=='RECOVERING' else 'step'
                         with self.lock:self.busy=True
                         break
         if self.context:self.context.close()
