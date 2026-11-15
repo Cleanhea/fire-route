@@ -32,3 +32,5 @@ The privileged test runner provisions eight actual AEs and their ACPs, issues ce
 - NGINX stable 1.30.6 is selected from its official release listing; nginx:1.30.6-alpine image availability/digest and installed behavior still require a successful real build/run.
 
 Sources: [NGINX client-certificate verification and subject variables](https://nginx.org/en/docs/http/ngx_http_ssl_module.html), [official NGINX releases](https://nginx.org/en/download.html), [ACME authentication capabilities](https://acmecse.net/setup/Certificates/). ACME Basic/Bearer support alone must not be represented as binding an arbitrary X-M2M-Origin to the authenticated actor.
+
+Startup detail: the enrollment/listener container starts after the gateway. Its callback upstream is therefore resolved at request time rather than NGINX startup, using [Docker's documented embedded resolver](https://docs.docker.com/engine/network/#dns-services) and [NGINX variable proxy resolution](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass). This avoids a source-level DNS dependency cycle; actual startup/notification success still requires T36.
