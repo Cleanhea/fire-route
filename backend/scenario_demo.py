@@ -264,8 +264,10 @@ def main():
     origin = os.getenv('APP_PUBLIC_ORIGIN','http://127.0.0.1:3001')
     static_root = ROOT/'frontend/scenario'
     if not static_root.is_dir():static_root=Path(sys.prefix)/'share/fire-route/frontend/scenario'
+    from backend.tls import server_context
+    tls=server_context(origin,os.getenv('APP_TLS_CERT'),os.getenv('APP_TLS_KEY'))
     server = api_server(os.getenv('APP_BIND_HOST','127.0.0.1'),int(os.getenv('APP_PORT','3000')),
-        app,auth,origin,static_root,actions={'step','advance_30','pause','resume','reset','stop_display_c'},snapshots=True)
+        app,auth,origin,static_root,actions={'step','advance_30','pause','resume','reset','stop_display_c'},snapshots=True,tls_context=tls)
     worker = Thread(target=app.run,daemon=True);worker.start()
     def stop(signum,frame):
         app.stop.set();Thread(target=server.shutdown,daemon=True).start()

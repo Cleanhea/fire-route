@@ -4,11 +4,34 @@
 
 A simulation-based PoC for the 2026 oneM2M × ETSI MEC international hackathon. GitHub repository and checkout directory: **fire-route**. Repository: [gaevalja/fire-route](https://github.com/gaevalja/fire-route).
 
-> Current state: actual T05, P1_ROUTES, P1_GROUP and P1_DASHBOARD passed on ACME 2026.5.1 / Python 3.12.16. The local loop includes authenticated role APIs, synthetic occupants, CSE notifications → computed routes → Group/fopt → independent simulated display ACKs. Browser rendering has not been checked. Controlled local CSE shutdown/persistence now passes; MEC, full application recovery and authenticated CSE transport remain open. See [STATUS](docs/STATUS.md) for the exact tested revision and subsequent changes.
+> Local acceptance checkpoint (2026-11-16 KST): the user's `make verify-local` passes all 19 stages, including actual CSE/Group/device ACKs, MQTT/discovery, HTTP and HTTPS rendered Chrome checks, and certificate/role verification. The working-tree source manifest and original evidence are indexed in [STATUS](docs/STATUS.md). Clean-commit reproduction, video/article publication and MEC remain separate unfinished work. [Submission artifacts](docs/submission/README.md) are prepared locally.
 
-> Scenario update (2026-11-12): the user selected **fire_evac: floors 1–10 plus roof, 162 zones**, then requested both fixed guidance and moving residents. Original source is unchanged. A new assumed-geometry model, CSE/core runner and separate ten-floor role dashboard are implemented; selected baseline, natural-hazard, HTTP and bounded fault/recovery gates have passed; comprehensive browser and broader process-recovery verification remain open. Earlier PASS evidence above belongs to the three-floor regression. See [scenario](docs/SCENARIO.md) and [evacuation model](docs/EVACUATION_MODEL.md).
+Actual acceptance evidence/20261115-164139Z-e3f6e93b/ records 19 PASS stages, zero unattempted stages and cleanup exit 0. HTTP and HTTPS browsers each pass 20 checks; eight certificate/role checks negotiate TLS 1.3. A separate 57-check read-only review correlates both browser incidents to real CSE frames, fan-out commands and independent device ACKs. Python 336, frontend 15 and browser-driver 23 cases pass. This is current-worktree acceptance, not clean-commit/remote-CI reproduction or full CSE authentication. The captured Chrome environment lacks readable Hangul glyphs; correct font coverage and inspect screenshots before recording the submission video. See [local acceptance](docs/LOCAL_ACCEPTANCE.md) for reproducible commands and remaining boundaries.
 
-> Verified local checkpoints: T30 controlled CSE stop/start and all three affected fault/hazard/role regressions pass with real protocol/device evidence. T31 now passes five warmups and 30 measured actual-CSE attempts: observer ACK-verification p50 1684.876 ms/p95 2556.166 ms. See [PERFORMANCE](docs/PERFORMANCE.md) for the measured boundary, data and graph. Full application-process/partial-dispatch recovery, comprehensive browser QA, security/transport/discovery gaps and MEC remain open. [STATUS](docs/STATUS.md) records exact run IDs and scope.
+Normal use: `make demo-scenario-up`, then http://127.0.0.1:3001/. Read the private role codes from .runtime/access-codes.json. Stop with `make down`.
+
+~~~bash
+# One serial acceptance plan in a separate local Compose project.
+make verify-local
+
+# After committing reviewed changes, reproduce from an isolated clean commit.
+make verify-clean
+
+# Focused new gates / optional local HTTPS / genuine screen capture.
+make p1-standards
+make p1-browser
+make demo-secure-up
+make test-https
+make record-demo
+~~~
+
+Run these commands from a Docker-capable terminal, one at a time. Chrome with a working sandbox is required for rendered-browser checks; FFmpeg is optional for MP4 encoding. HTTPS uses https://127.0.0.1:3443/ and a generated local development CA. It does not complete CSE originator authentication or encrypt the separate dev CSE/MQTT links. Full procedures and scope are in LOCAL_ACCEPTANCE.md.
+
+> Current state: actual T05, P1_ROUTES, P1_GROUP and P1_DASHBOARD passed on ACME 2026.5.1 / Python 3.12.16. The local loop includes authenticated role APIs, synthetic occupants, CSE notifications → computed routes → Group/fopt → independent simulated display ACKs. The selected ten-floor HTTP/HTTPS browser flow and full 19-stage local gate now pass. Controlled local CSE shutdown/persistence passes; MEC, full application-process/partial-dispatch recovery and authenticated CSE transport remain open. See [STATUS](docs/STATUS.md) for exact evidence and boundaries.
+
+> Scenario update: the user selected **fire_evac: floors 1–10 plus roof, 162 zones**, then requested both fixed guidance and moving residents. Original source is unchanged. The assumed-geometry model, CSE/core runner and ten-floor role dashboard pass selected baseline, natural-hazard, HTTP/HTTPS browser and bounded fault/recovery gates. Browser hazard-stage recording, font readability and broader process-recovery verification remain open. Earlier three-floor runs remain regressions. See [scenario](docs/SCENARIO.md) and [evacuation model](docs/EVACUATION_MODEL.md).
+
+> Verified local checkpoints: T30 controlled CSE stop/start and affected fault/hazard/role regressions pass with real protocol/device evidence. T31's original 30-sample observer baseline is p50 1684.876 ms/p95 2556.166 ms; the later acceptance run measures 557.233/740.982 ms under the same declared metric, without a controlled optimization or speedup claim. See [PERFORMANCE](docs/PERFORMANCE.md) for both run identities and the original graph. Full application-process/partial-dispatch recovery, CSE authentication/MQTTS/advanced semantics and MEC remain open.
 
 Run `make test-scenario` to execute the original engine tests. Opening `simulator/scenarios/fire_evac/index.html` runs its standalone scenario maker, with no CSE/MEC integration. Fire/smoke/collapse rules stay as supplied; the added movement/entrance assumptions are defined separately in EVACUATION_MODEL.md.
 

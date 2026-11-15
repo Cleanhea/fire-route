@@ -7,7 +7,7 @@ import ssl
 import time
 from typing import Callable
 from urllib import error, request
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from uuid import uuid4
 
 from backend.config import http_url
@@ -90,7 +90,7 @@ class CSEClient:
                          transport=self.transport, evidence=self.evidence, actor=actor)
 
     def _request(self, method: str, path: str, resource_type: int | None = None, payload: dict | None = None,
-                 *, aggregate: bool = False) -> dict:
+                 *, aggregate: bool = False, query: dict | None = None) -> dict:
         if (not path.startswith("/") or path.startswith("//") or any(c in path for c in "?#\r\n")
                 or any(p in {".", ".."} for p in path.split("/"))):
             raise ValueError("Resource path must stay inside the configured CSE endpoint")
@@ -100,11 +100,16 @@ class CSEClient:
         if payload is not None:
             headers["Content-Type"] = "application/vnd.onem2m-res+json;ty=" + str(resource_type)
             body = json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        if query is not None and method != 'GET':
+            raise ValueError('Filters require RETRIEVE')
+        suffix = '?' + urlencode(query) if query else ''
         record = {"actor": self.actor, "method": method, "path": path, "request_id": rqi,
                   "request_headers": {k: v for k, v in headers.items() if k != "X-M2M-Origin"}, "request_body": payload}
+        if query:
+            record['query'] = query
         start = time.monotonic()
         try:
-            wire = self.transport(method, self.url + quote(path, safe="/:~_-"), headers, body, self.timeout)
+            wire = self.transport(method, self.url + quote(path, safe="/:~_-") + suffix, headers, body, self.timeout)
             rh = {k.lower(): v for k, v in wire.headers.items()}
             record.update(http_status=wire.status, response_headers={k: v for k, v in rh.items() if k in {"x-m2m-ri", "x-m2m-rvi", "x-m2m-rsc", "content-type"}})
             if 300 <= wire.status < 400:
@@ -150,6 +155,31 @@ class CSEClient:
 
     def retrieve(self, path: str) -> dict:
         return self._request("GET", path)
+
+    def discover(self, path: str, *, label: str, resource_type: int, limit: int = 100) -> list[str]:
+        """Bounded TS-0009 discovery; label is a filter, never a raw query/URL.
+
+        drt=2 requests unstructured resource references. A caller must read back
+        and verify discovered resources before using them for device control.
+        No result is cached or synthesized from the bootstrap inventory.
+        """
+        if (not isinstance(label, str) or not label or len(label) > 128
+                or any(ord(c) < 33 or ord(c) == 127 for c in label)):
+            raise ValueError('Invalid discovery label')
+        if type(resource_type) is not int or resource_type not in RESOURCE_ROOTS:
+            raise ValueError('Unsupported discovery resource type')
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError('Invalid discovery limit')
+        result = self._request('GET', path, query={'fu': 1, 'drt': 2,
+            'ty': resource_type, 'lbl': label, 'lim': limit})
+        refs = result.get('m2m:uril')
+        if (not isinstance(refs, list) or len(refs) > limit
+                or any(not isinstance(ref, str) or not ref or len(ref) > 1024
+                    or any(c in ref for c in '?&#\\\r\n') or '://' in ref
+                    or any(part in {'.', '..'} for part in ref.split('/')) for ref in refs)
+                or len(refs) != len(set(refs))):
+            raise ProtocolError('Malformed or over-limit oneM2M discovery URI list')
+        return refs
 
     def create(self, path: str, resource_type: int, attributes: dict) -> dict:
         if resource_type not in RESOURCE_ROOTS:

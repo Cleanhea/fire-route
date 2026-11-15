@@ -1,5 +1,7 @@
 # FireRoute local runtime and deferred Hosted MEC deployment plan
 
+Latest scope: the user chose local completion on 2026-11-15. [LOCAL_ACCEPTANCE](LOCAL_ACCEPTANCE.md) is the executable local runbook for isolated standards, optional API HTTPS, actual rendered-browser tests and clean-commit reproduction. compose.standards.yaml has its own real CSE/broker/volumes with no host ports; compose.https.yaml changes the selected API listener only. Actual user-terminal acceptance 20261115-164139Z-e3f6e93b passes all 19 stages, including real MQTT/discovery, HTTP/HTTPS browsers and TLS 1.3 certificate/role checks. Clean-commit reproduction and remote CI remain NOT_RUN; the agent's restricted direct environment is separate from these actual user runs. The default main CSE still disables MQTT and retains its data volume/key/patch. No Hosted/Local MEC installation was attempted.
+
 ## 1. Current execution gate and source requirements
 
 The user changed the strategy on 2026-11-14: Phase 1 completes the current WSL2/Docker/actual ACME system; Phase 2 prepares portable components/configuration/interfaces locally. Phase 3 may access or deploy to the organizer Hosted MEC Sandbox only after a separate explicit user instruction. No Hosted URL probe, login, OAuth flow, namespace/API enumeration or deployment is performed now. Public reference documentation can be read. Phase 4 must submit a functioning local system by Nov 20 even if MEC is incomplete. See ADR-019 and ROADMAP.md; historical P0–P4 references are traceability labels.

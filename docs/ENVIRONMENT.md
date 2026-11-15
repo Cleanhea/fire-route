@@ -1,5 +1,9 @@
 # FireRoute environments and configuration
 
+Latest local execution: see [LOCAL_ACCEPTANCE](LOCAL_ACCEPTANCE.md) for Chrome/CDP pipe, optional OpenSSL HTTPS and FFmpeg capture requirements, isolated MQTT/discovery and clean-commit acceptance. The main app still has no third-party runtime dependency; only the isolated standards image adds paho-mqtt==2.1.0 and a private broker. Chrome sandbox and actual Docker/network access are required for their real gates. Agent docker ps can observe the existing demo, but Docker exec/Compose API and AF_INET creation are denied; browser/API integration is not executable merely because containers are visible.
+
+Actual user-terminal make verify-local at evidence/20261115-164139Z-e3f6e93b/ passes all 19 steps on the working tree, including Chrome 157.0.8103.78 HTTP/HTTPS flows and TLS 1.3. This supersedes the agent-only runtime blockers for that recorded user environment; it is not clean-commit/remote-CI proof. Captured Chrome screenshots show missing Hangul glyphs. The recording environment needs a font with Hangul coverage and a visually reviewed rerun before video capture; DOM text/layout assertions alone cannot establish readable glyphs. No system font installation or trust-store change was performed by the agent.
+
 ## 1. Environment roles
 
 | Environment | Role | Boundary |

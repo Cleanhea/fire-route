@@ -72,7 +72,7 @@ p1-scenario-dashboard: scenario-trace access-codes
 
 demo-scenario-up: SCENARIO_SECONDS=1800
 demo-scenario-up: scenario-trace access-codes
-	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile scenario-demo up -d --build --force-recreate cse scenario-app
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile scenario-demo up -d --build --force-recreate --wait --wait-timeout 120 cse scenario-app
 
 demo-scenario-logs:
 	docker compose --profile scenario-demo logs --tail=100 scenario-app
@@ -106,6 +106,43 @@ p1-group:
 
 access-codes:
 	$(PYTHON) -m backend.auth
+
+.PHONY: test-browser-driver test-browser p1-browser p1-standards tls-files demo-secure-up test-https verify-local verify-clean
+test-browser-driver:
+	node tests/browser/cdp.test.mjs
+	node tests/browser/controls.test.mjs
+
+test-browser:
+	node tests/browser/dashboard.mjs
+
+p1-browser: demo-scenario-up
+	node tests/browser/dashboard.mjs
+
+.PHONY: record-demo standards-down
+record-demo: demo-scenario-up
+	node tests/browser/dashboard.mjs --record
+
+standards-down:
+	docker compose -p $${COMPOSE_PROJECT_NAME:-fire-route}-standards -f compose.standards.yaml down
+
+p1-standards:
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose -p $${COMPOSE_PROJECT_NAME:-fire-route}-standards -f compose.standards.yaml up --build --abort-on-container-exit --exit-code-from standards
+
+tls-files:
+	$(PYTHON) -m infra.dev_tls
+
+demo-secure-up: SCENARIO_SECONDS=1800
+demo-secure-up: scenario-trace access-codes tls-files
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose -f compose.yaml -f compose.https.yaml --profile scenario-demo up -d --build --force-recreate --wait --wait-timeout 120 cse scenario-app
+
+test-https:
+	$(PYTHON) -m tests.integration.tls_check
+
+verify-local:
+	$(PYTHON) -m infra.local_release
+
+verify-clean:
+	$(PYTHON) -m infra.local_release --clean-checkout
 
 demo-up: access-codes
 	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile dashboard up -d --build cse app

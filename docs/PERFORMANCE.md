@@ -51,3 +51,14 @@ python3 -m tests.integration.latency_report evidence/20261115-123305Z-389f0ade
 ~~~
 
 A fresh run should preserve the declared workload, counts and correlations; its durations may differ. The original private path exists only on the measuring workstation. A successful statistics recalculation validates its inputs/math, and requires separate actual wire/device evidence to establish a real-CSE result.
+
+## Later acceptance repeat — separate run
+
+The 19-stage worktree acceptance evidence/20261115-164139Z-e3f6e93b/ executes the same declared 5-warmup/30-measured observer gate at evidence/20261115-164749Z-8c4b5abd/. All 35 attempts complete. These are additional observations, not replacements for the original CSV/figure above.
+
+| Observer metric | N | p50 (ms) | p95 (ms) | Minimum (ms) | Maximum (ms) |
+|---|---:|---:|---:|---:|---:|
+| Verified three-device ACKs | 30 | 557.233 | 740.982 | 402.879 | 750.627 |
+| Public-status commit | 30 | 646.685 | 827.376 | 488.029 | 843.810 |
+
+Read-only acceptance review evidence/20261115-165511Z-77d52c9a/ independently recalculates both percentiles from the measured integer-nanosecond ticks and matches the original report/primary summary. This arithmetic review and the executed integration gate are distinct proof. The acceptance runtime/test manifest is 98388db705480e81fe497a65590770ad9d1da06a14e70bd06341a0cd72f5c647. Host utilization and comparable clock/environment uncertainty remain unmeasured; this was not a controlled optimization experiment. Do not combine runs into one percentile, redraw the original chart as this run, or claim the lower values prove a speedup/SLO, browser latency or MEC advantage. Preserve the same observer/E2E limitations above.

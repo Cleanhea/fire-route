@@ -13,9 +13,13 @@ STATIC={'/':('index.html','text/html; charset=utf-8'),'/app.js':('app.js','text/
         '/model.mjs':('model.mjs','text/javascript; charset=utf-8'),'/styles.css':('styles.css','text/css; charset=utf-8')}
 
 
-def api_server(host,port,app,auth,origin,static_root:Path,*,actions=None,snapshots=False):
+def api_server(host,port,app,auth,origin,static_root:Path,*,actions=None,snapshots=False,tls_context=None):
     allowed_actions = frozenset(actions if actions is not None else {'fire_a','fire_b','stop_display_c','reset','pause','resume'})
     class Handler(BaseHTTPRequestHandler):
+        def setup(self):
+            super().setup()
+            self.connection.settimeout(10)
+
         def log_message(self,*args):pass
 
         def token(self):
@@ -105,5 +109,10 @@ def api_server(host,port,app,auth,origin,static_root:Path,*,actions=None,snapsho
             auth.logout(self.token())
             return self.send(200,{'state':'SIGNED_OUT'},cookie=self.session_cookie('',clear=True))
     server=ThreadingHTTPServer((host,port),Handler)
+    if tls_context is not None:
+        try:server.socket=tls_context.wrap_socket(server.socket,server_side=True,do_handshake_on_connect=False)
+        except Exception:
+            server.server_close()
+            raise
     server.daemon_threads=True
     return server
