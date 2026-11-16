@@ -1,4 +1,4 @@
-import {routeFor,timeLabel,selectedResident,freshPeople,rememberPeople,peoplePresentation,residentOptionsKey} from '/model.mjs';
+import {routeFor,timeLabel,selectedResident,freshPeople,rememberPeople,peoplePresentation,residentOptionsKey,mecLabel} from '/model.mjs';
 const $=id=>document.getElementById(id);
 let role=null,building=null,view=null,busy=false,incident=null,savedPeople=null,peopleKey=null;
 let movement={kind:'UNAVAILABLE',data:null};
@@ -36,6 +36,7 @@ function personDescription(){
   return person?`${prefix}${person.status} · ${person.node}${person.target?' → '+person.target+' · 통로 '+person.progress_m.toFixed(1)+' m':''}`:movement.data?'이 실행에는 가상 주민이 없습니다.':'주민 기록을 읽지 못했습니다. 연결 또는 초기화 상태를 확인하세요.';
 }
 function render(next){
+  $('mec-badge').textContent='10층 + 옥상 · 합성 162구역 · '+mecLabel(next);
   view=next;const status=next?.guidance_status||'UNKNOWN',path=routeFor(next);$('clock').textContent=timeLabel(next?.simulation_second);$('guidance').textContent=labels[status]||labels.UNKNOWN;$('exit').textContent=path.length?next.route.target_exit:'—';$('acks').textContent=(next?.delivery?.ack_count??'—')+' / 3';
   movement=role==='responder'?peoplePresentation(next,savedPeople,incident):{kind:'UNAVAILABLE',data:null};
   const people=movement.data;

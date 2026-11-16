@@ -188,6 +188,33 @@ mec-local-down:
 mec-local-logs:
 	docker compose -p fire-route-mec-local -f compose.mec-local.yaml -f compose.mec-runtime.yaml logs --tail=50 mec-platform mec-redis mec-cse
 
+.PHONY: mec-services-prepare mec-services-up p1-mec-services mec-services-down mec-services-logs
+mec-services-prepare:
+	$(PYTHON) -m infra.mec_services
+
+mec-services-up: mec-services-prepare
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml up -d --build --wait --wait-timeout 240 mec-ipe
+
+p1-mec-services:
+	node simulator/export_scenario.cjs --seed 59 --wind 5 --seconds 728 --output .runtime/fire-evac-mec.jsonl
+	$(MAKE) mec-services-up
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml run --build --rm --no-deps --use-aliases mec-services-check
+	$(MAKE) p1-mec-dashboard
+
+mec-services-down:
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml down
+
+mec-services-logs:
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml logs --tail=50 mec-controller mec-platform mec-risk mec-ipe mec-cse
+
+.PHONY: demo-mec-up p1-mec-dashboard
+demo-mec-up: access-codes mec-services-prepare
+	node simulator/export_scenario.cjs --seed 59 --wind 5 --seconds 1800 --output .runtime/fire-evac-mec-demo.jsonl
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml --profile mec-dashboard up -d --build --wait --wait-timeout 240 mec-dashboard
+
+p1-mec-dashboard: demo-mec-up
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml --profile mec-dashboard --profile mec-dashboard-check run --build --rm --no-deps mec-dashboard-check
+
 demo-up: access-codes
 	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile dashboard up -d --build cse app
 

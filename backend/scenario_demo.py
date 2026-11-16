@@ -21,8 +21,9 @@ from simulator.scenario_frames import ROOT,ScenarioFrame,read_trace,trace_digest
 
 
 class ScenarioApp:
-    def __init__(self,settings,trace):
+    def __init__(self,settings,trace,*,session_factory=None):
         self.settings,self.trace = settings,trace
+        self.session_factory=session_factory
         self.context = None
         self.lock = Lock();self.jobs = queue.Queue(maxsize=1);self.stop = Event()
         self.busy,self.paused,self.state = True,True,'INITIALIZING'
@@ -170,7 +171,7 @@ class ScenarioApp:
     def reset(self):
         with self.lock:old,self.context = self.context,None
         if old:old.close()
-        context = ScenarioSession(self.settings)
+        context = (self.session_factory or ScenarioSession)(self.settings)
         try:
             context.start()
             context.evidence.write('replay-source.json',{'kind':'SYNTHETIC_SOURCE_REPLAY',
@@ -255,11 +256,11 @@ class ScenarioApp:
         if self.context:self.context.close()
 
 
-def main():
+def main(app_type=ScenarioApp):
     if sys.version_info<(3,11):
         print(json.dumps({'state':'BLOCKED','reason':'Use the Python 3.12 scenario-app profile'}));return 2
     settings = Settings.load()
-    app = ScenarioApp(settings,Path(os.getenv('SCENARIO_TRACE','.runtime/fire-evac-trace.jsonl')))
+    app = app_type(settings,Path(os.getenv('SCENARIO_TRACE','.runtime/fire-evac-trace.jsonl')))
     auth = AuthStore.load(Path(os.getenv('APP_AUTH_FILE','.runtime/auth.json')))
     origin = os.getenv('APP_PUBLIC_ORIGIN','http://127.0.0.1:3001')
     static_root = ROOT/'frontend/scenario'
@@ -272,7 +273,7 @@ def main():
     def stop(signum,frame):
         app.stop.set();Thread(target=server.shutdown,daemon=True).start()
     signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
-    print(json.dumps({'state':'APP_LISTENING','origin':origin,'profile':'fire_evac_10f_v1','MEC':'UNAVAILABLE'}),flush=True)
+    print(json.dumps({'state':'APP_LISTENING','origin':origin,'profile':'fire_evac_10f_v1','MEC':app.status()['MEC']}),flush=True)
     try:server.serve_forever()
     finally:app.stop.set();server.server_close();worker.join(timeout=25)
     return 0

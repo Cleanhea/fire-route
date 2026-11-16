@@ -1,5 +1,7 @@
 # Local official MEC011 runtime and FireRoute integration
 
+The subsequent [FireRoute service/IPE/dashboard increment](MEC_SERVICES.md) is implemented for separate actual validation with make p1-mec-services; its interactive command is make demo-mec-up on port 3002. The earlier seven-check profile below stays the verified component baseline. New runtime success has not yet been claimed.
+
 The user explicitly requests local MEC integration and excludes video work. Both official STF_685 repositories are now acquired and reviewed. The runtime below builds the official App Enablement component directly, alongside Redis and a separate actual ACME CSE. This is an actual upstream service process, not a FireRoute replacement MEC server. It is a bounded local component deployment, not the complete Kubernetes Sandbox/UI, an orchestrator, VM placement or TR-0086 Option C.
 
 Actual result: user make p1-mec-local at evidence/20261116-114543Z-372e392f passes all seven native checks, with actual component/CSE/Redis startup and healthy services. Catalog service_count=0 is expected for this fresh unseeded profile. The application-AE bridge is verified for discovery metadata; FireRoute risk-app registration, consumption, manager-controlled placement and official IPE remain open. The test client exits after the gate, while the three services remain running; this is not yet a continuous dashboard/MEC risk pipeline.

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FireRoute · 통합 대피 시뮬레이션</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script></head>
 <body>
-<header><b>FireRoute <span>SCENARIO LAB</span></b><span class="badge">10층 + 옥상 · 합성 162구역 · MEC 미연결</span></header>
+<header><b>FireRoute <span>SCENARIO LAB</span></b><span id="mec-badge" class="badge">10층 + 옥상 · 합성 162구역 · MEC 미연결</span></header>
 <main>
 <section id="login" class="card narrow"><h1>대피 시뮬레이션 접속</h1><p>같은 화재 상태에서 고정 위치 안내와 가상 주민 이동을 확인합니다.</p><form id="login-form"><label for="role">역할</label><select id="role"><option value="resident">주민</option><option value="responder">구조대</option></select><label for="code">접속 코드</label><input id="code" type="password" required autocomplete="current-password"><button>접속</button></form><p id="error" role="alert"></p></section>
 <div id="app" hidden>

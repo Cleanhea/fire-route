@@ -16,10 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PREFIXES = ('go-apps/meep-app-enablement', 'go-packages', 'LICENSE')
 
 
-def stage_checkout(checkout, output, commit):
+def stage_checkout(checkout, output, commit, *, prefixes=PREFIXES):
     """Use committed objects, excluding every untracked/ignored local setting."""
     try:
-        archive = subprocess.check_output(['git', 'archive', '--format=tar', commit, '--', *PREFIXES],
+        archive = subprocess.check_output(['git', 'archive', '--format=tar', commit, '--', *prefixes],
                                          cwd=checkout, stderr=subprocess.DEVNULL, timeout=60)
     except (OSError, subprocess.SubprocessError):
         raise PreparationBlocked('OFFICIAL_GIT_ARCHIVE_UNAVAILABLE') from None
@@ -28,8 +28,8 @@ def stage_checkout(checkout, output, commit):
         for member in tar.getmembers():
             path = PurePosixPath(member.name)
             name = member.name.rstrip('/')
-            allowed = any(name == p or name.startswith(p + '/') for p in PREFIXES)
-            ancestor = member.isdir() and any(p.startswith(name + '/') for p in PREFIXES)
+            allowed = any(name == p or name.startswith(p + '/') for p in prefixes)
+            ancestor = member.isdir() and any(p.startswith(name + '/') for p in prefixes)
             if path.is_absolute() or '..' in path.parts or not (allowed or ancestor):
                 raise PreparationBlocked('UNSAFE_RUNTIME_SOURCE_ARCHIVE')
             if member.isdir():

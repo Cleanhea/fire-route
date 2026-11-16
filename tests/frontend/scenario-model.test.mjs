@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {routeFor,timeLabel,selectedResident,rememberPeople,peoplePresentation,residentOptionsKey} from '../../frontend/scenario/model.mjs';
+import {routeFor,timeLabel,selectedResident,rememberPeople,peoplePresentation,residentOptionsKey,mecLabel} from '../../frontend/scenario/model.mjs';
 
 test('selected profile hides directions for stale pending and failed CSE',()=>{
   const current={connections:{cse:'LIVE'},guidance_status:'ROUTE_AVAILABLE',route:{path:['F7-R3','EXIT_A']}};
@@ -61,4 +61,12 @@ test('absent data stays unavailable rather than inventing people',()=>{
   assert.equal(peoplePresentation({guidance_status:'STALE'},null,'inc-unit').kind,'UNAVAILABLE');
   const malformed={...current(),population:{total:3}};
   assert.equal(rememberPeople(null,malformed,'inc-unit'),null);
+});
+test('MEC badge requires a verified current result rather than only configuration or a running service',()=>{
+  assert.equal(mecLabel(null),'MEC 미연결');
+  const view={connections:{cse:'LIVE',mec:'VERIFIED_RESULT'},guidance_status:'ROUTE_AVAILABLE'};
+  assert.equal(mecLabel(view),'MEC 경유 계산 확인');
+  assert.equal(mecLabel({...view,guidance_status:'NO_VERIFIED_ROUTE'}),'MEC 경유 계산 확인');
+  for(const status of ['STALE','UNKNOWN','PENDING'])assert.notEqual(mecLabel({...view,guidance_status:status}),'MEC 경유 계산 확인');
+  assert.notEqual(mecLabel({...view,connections:{cse:'UNKNOWN',mec:'VERIFIED_RESULT'}}),'MEC 경유 계산 확인');
 });

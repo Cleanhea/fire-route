@@ -144,9 +144,11 @@ class CSEClient:
             record["response_body"] = result
             if not 200 <= wire.status < 300 or not 2000 <= rsc < 3000:
                 raise CSEError(f"CSE operation denied/failed (HTTP {wire.status}, RSC {rsc})", http_status=wire.status, rsc=rsc)
-            expected = 2000 if aggregate else (2001 if method == "POST" else 2000)
+            expected = 2000 if aggregate else (2001 if method == "POST" else 2002 if method == "DELETE" else 2000)
             if rsc != expected:
                 raise ProtocolError(f"Unexpected oneM2M success status for {method}", http_status=wire.status, rsc=rsc)
+            if method == 'DELETE' and wire.status != 200:
+                raise ProtocolError('Unexpected HTTP status for DELETE',http_status=wire.status,rsc=rsc)
             if aggregate:
                 responses = result.get("m2m:agr", {}).get("m2m:rsp") if isinstance(result.get("m2m:agr"), dict) else None
                 if (wire.status != 200 or not isinstance(responses, list) or not responses
@@ -164,6 +166,10 @@ class CSEClient:
 
     def retrieve(self, path: str) -> dict:
         return self._request("GET", path)
+
+    def delete(self, path: str) -> dict:
+        """Single DELETE, requiring correlated HTTP 200 / RSC 2002; no retry."""
+        return self._request('DELETE',path)
 
     def discover(self, path: str, *, label: str, resource_type: int, limit: int = 100) -> list[str]:
         """Bounded TS-0009 discovery; label is a filter, never a raw query/URL.

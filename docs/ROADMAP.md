@@ -1,5 +1,7 @@
 # FireRoute roadmap — local completion, then gated Hosted integration
 
+Local follow-up: native app/service registration, an independent risk provider, project IPE and optional MEC dashboard are implemented under ADR-028. Actual start is Docker-access-BLOCKED; next execute make p1-mec-services, then use make demo-mec-up on port 3002. See [MEC_SERVICES](MEC_SERVICES.md). This is the next increment after the verified seven-check component baseline below.
+
 Planning baseline: 2026-11-11; progress updated 2026-11-16 (Asia/Seoul).
 
 Latest actual local MEC milestone: official component/Redis/CSE startup and the seven-check discovery/CIN/SUB/ACP gate pass at 20261116-114543Z-372e392f. This replaces the startup blocker below for the recorded user run. Preserve/commit the verified implementation. Next meaningful MEC work is real FireRoute application/service registration and consumption with actual platform-assigned IDs, followed by supported IPE/placement evidence. The current empty catalog and external component containers do not satisfy those claims. Inspect the acquired app-controller/IPE prerequisites before adding dependencies; no fabricated IDs or Redis seeding. Video and Hosted remain excluded.

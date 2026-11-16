@@ -27,3 +27,8 @@ export function peoplePresentation(live,saved,incident){
   return {kind:'UNAVAILABLE',data:null};
 }
 export function residentOptionsKey(data){return (data?.residents||[]).map(p=>p.resident_id).join('\u0000');}
+export function mecLabel(view){
+  if(view?.connections?.mec==='VERIFIED_RESULT'&&view.connections.cse==='LIVE'
+    &&['ROUTE_AVAILABLE','NO_VERIFIED_ROUTE'].includes(view.guidance_status))return 'MEC 경유 계산 확인';
+  return view?.connections?.mec==='UNKNOWN'?'MEC 계산 확인 불가':'MEC 미연결';
+}

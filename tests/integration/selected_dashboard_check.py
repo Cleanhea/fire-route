@@ -97,6 +97,9 @@ def run():
         call('/api/v1/scenario','resident','POST',{'action':'step'},expect=403)
         call('/api/v1/scenario','responder','POST',{'action':'fire_a'},expect=400)
         a,b=views('initial')
+        if os.getenv('REQUIRE_MEC_RESULT')=='1':
+            check('actual_MEC_result_used',a['connections'].get('mec')==b['connections'].get('mec')=='VERIFIED_RESULT')
+            summary.update(test='LOCAL_MEC_DASHBOARD',MEC='VERIFIED_RESULT',MEC_IPE='FIREROUTE_PROJECT_IPE_V1')
         check('initial_both_modes_available',a['simulation_second']==0 and (a.get('route') or {}).get('source_node')=='F7-R3'
             and b['population']['total']==170 and len(b['residents'])==170 and a['delivery']['ack_count']==3)
         print(json.dumps({'test':'P1_SELECTED_DASHBOARD','phase':'ADVANCE_30_SECONDS'}),flush=True)
@@ -108,6 +111,8 @@ def run():
         check('actual_group_ACKs',a['delivery']['ack_count']==3 and a['delivery']['state']=='ALL_ACKED')
         print(json.dumps({'test':'P1_SELECTED_DASHBOARD','phase':'EXPIRY_WAIT_31_SECONDS'}),flush=True)
         time.sleep(31);a,b=views('stale')
+        if os.getenv('REQUIRE_MEC_RESULT')=='1':
+            check('expired_MEC_result_not_labeled_live',a['connections'].get('mec')==b['connections'].get('mec')=='UNKNOWN')
         check('stale_clears_direction_and_positions',a['guidance_status']=='STALE' and a['route'] is None and not {'population','residents','occupants'}&b.keys())
         snapshot=call(f"/api/v1/incidents/{state['incident_id']}/snapshot",'responder')
         out.write('paused-historical-snapshot.json',snapshot)
