@@ -162,6 +162,32 @@ mec-discover:
 mec-catalog-to-cse:
 	$(PYTHON) -m mec.probe --persist-onem2m
 
+.PHONY: mec-local-prepare mec-local-inspect mec-runtime-stage mec-local-up p1-mec-local p1-mec-external mec-local-down mec-local-logs
+mec-local-prepare:
+	$(PYTHON) -m infra.mec_local
+
+mec-local-inspect:
+	$(PYTHON) -m infra.mec_local --inspect
+
+mec-runtime-stage:
+	$(PYTHON) -m infra.mec_runtime
+
+mec-local-up: mec-runtime-stage
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose -p fire-route-mec-local -f compose.mec-local.yaml -f compose.mec-runtime.yaml up -d --build --wait --wait-timeout 180 mec-redis mec-platform mec-cse
+
+p1-mec-local: mec-local-up
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose -p fire-route-mec-local -f compose.mec-local.yaml -f compose.mec-runtime.yaml run --build --rm --no-deps --use-aliases mec-check
+
+p1-mec-external:
+	$(PYTHON) -m mec.local_integration --preflight
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose -p fire-route-mec-local -f compose.mec-local.yaml up --build --abort-on-container-exit --exit-code-from mec-check
+
+mec-local-down:
+	docker compose -p fire-route-mec-local -f compose.mec-local.yaml -f compose.mec-runtime.yaml down
+
+mec-local-logs:
+	docker compose -p fire-route-mec-local -f compose.mec-local.yaml -f compose.mec-runtime.yaml logs --tail=50 mec-platform mec-redis mec-cse
+
 demo-up: access-codes
 	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile dashboard up -d --build cse app
 

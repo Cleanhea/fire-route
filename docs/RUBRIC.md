@@ -129,7 +129,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: Local Sandbox access, acquired guide, app artifact/lifecycle, MN-to-IN registration, placement evidence; additional multi-host orchestration only if supported.
 - Verify: T16/T17 plus deployment review; verify what is a container, VM, external app or emulated platform.
 - Judge evidence: pinned deployment procedure, host/app identities, topology, lifecycle logs and registration read-back.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no Sandbox/CSE deployment. Deploying/registering an app/CSE/VM with documentation is the Proficient description; Option C on one host does not itself prove Expert orchestration.
+- Current status: Official local MEC011 component/Redis plus dedicated actual CSE now build/start and pass the seven-check catalog bridge. This is bounded component packaging, not manager-controlled application/VM placement or Option C. Actual FireRoute app registration/placement and cross-host orchestration remain NOT_RUN. Deploying/registering an app/CSE/VM with documentation is the Proficient description; Option C on one host does not itself prove Expert orchestration.
 
 ### 14. Federated Learning (TR-0084) — conditional
 
@@ -156,7 +156,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: actual catalog/OpenAPI inventory, official compatible IPE/mapping, correlated observation/request/result resources; no invented write operations.
 - Verify: T11; separate direction/service traces for any expanded Expert-level claim.
 - Judge evidence: discovery/configuration calls, MEC responses/notifications, CSE resources and consuming application's reaction.
-- Current status: IMPLEMENTED_UNVERIFIED for the bounded T37 MEC011 discovery client/application-AE catalog bridge; absent endpoint/account means the actual probe is BLOCKED before network. It is not the standardized MEC-IPE, runtime service consumption or deployment proof. Direct-call/lower-tier criteria and oneM2M-mediated/multiple-service/bidirectional evidence remain separate; no score is claimed.
+- Current status: VERIFIED for bounded actual local MEC011 discovery and application-AE catalog storage/read-back/SUB/ACP at 20261116-114543Z-372e392f, seven checks. The official component's real catalog is empty. Useful FireRoute service consumption, standardized MEC-IPE, multiple-service configuration and bidirectional interactions remain unverified. This does not establish the Expert criterion or application placement; no score is claimed.
 
 ### 17. AI Agents & MCP Integration — conditional
 

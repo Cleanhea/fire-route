@@ -10,5 +10,5 @@ COPY fixtures/ fixtures/
 COPY frontend/ frontend/
 COPY tests/ tests/
 COPY infra/ infra/
-COPY compose.yaml compose.standards.yaml compose.https.yaml compose.cse-security.yaml pyproject.toml Makefile .python-version .node-version LICENSE README.md ./
+COPY compose.yaml compose.standards.yaml compose.https.yaml compose.cse-security.yaml compose.mec-local.yaml compose.mec-runtime.yaml pyproject.toml Makefile .python-version .node-version LICENSE README.md ./
 ENTRYPOINT ["python", "-m", "backend.p0"]

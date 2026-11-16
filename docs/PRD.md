@@ -34,7 +34,7 @@ Existing F01–F19 identifiers are retained for traceability.
 | F11 | SHOULD / P3 | Device oneM2M MQTT and app HTTP(S), with protocol rationale | Actual request/response bindings produce CSE resources |
 | F12 | MUST / P3, baseline P1 | Separate least-privilege ACP, role authorization and deployment transport security | Authorized actions succeed; forbidden CSE writes and responder reads are denied |
 | F13 | SHOULD / P3 | Discover resources via labels; add FCNT if supported | Actual discovery results; FCNT definition/read-back when claimed |
-| F14 | CONDITIONAL / current Phase 3 (historical P2) | After separate instruction, verify a supported Hosted/official MEC topology and service; distinguish direct API from supported IPE-mediated interworking | Deployment identity and service → IPE → CSE → consumer trace |
+| F14 | CONDITIONAL / local MEC now; Hosted Phase 3 (historical P2) | Verify a supported official local MEC topology/service under the Nov 16 instruction; Hosted still needs separate instruction; distinguish direct API from supported IPE-mediated interworking | Deployment identity and service → IPE → CSE → consumer trace; bounded catalog discovery alone is partial |
 | F15 | SHOULD / P3 | Report measured p50/p95 with sample count and defined clock boundary | Reproducible calculation from real hop logs |
 | F16 | OPTIONAL | Controlled CSE handover | Actual dual-CSE outage/loss/restoration measurement |
 | F17 | OPTIONAL | MEC network location/geofencing | Supported real API trace; synthetic indoor coordinates never count |
@@ -75,6 +75,8 @@ By 2026-11-20 deliver the functioning selected scope, source repository, article
 ## Current strategy acceptance additions (2026-11-14)
 
 Phase 1 must remain independent of Hosted access: preserve actual local CSE behavior, verify shutdown cause/key/persistence, distinguish intentional missing-device tests from service failures, and retain safe handling of malformed/duplicate/stale observations. Phase 2 prepares a reusable standalone risk/route component, external local/Hosted settings and image/interfaces with no Hosted connection. Phase 3 is separately gated; user-described namespace/login details are unverified. Phase 4 submits working local artifacts even if MEC remains incomplete. No inactive template, unit mock or container running outside verified MEC lifecycle counts as F14/F22 completion.
+
+2026-11-16 scope update: the user explicitly requests local MEC integration and excludes agent video work. Local official-source acquisition/review and actual API/CSE integration are authorized now; organizer Hosted contact is not. T38 records acquired exact official source revisions, while T39 verifies local MEC011 discovery through a dedicated actual CSE/CIN/SUB/independent reader and ACP denial. These are bounded F14/F13 preparation/communication results, not full F14/IPE or F22/Option C completion. Platform startup, application lifecycle and service/IPE use require separate actual evidence from the acquired implementation. See LOCAL_MEC.md.
 
 ## Local completion gates (2026-11-15)
 

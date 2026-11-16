@@ -2,7 +2,9 @@
 
 **FireRoute: Intelligent Fire Evacuation and Rescue Guidance System**
 
-Latest verified checkpoint: published commit efc65cb passes `make verify-clean` — all 19 stages from a clean Git archive, zero unattempted steps and cleanup exit 0. Python 360/frontend 15/browser-driver 25 cases pass; actual CSE/Group/independent ACKs, faults/recovery, MQTT/discovery and HTTP/HTTPS Chrome all pass. Both browsers pass 20 checks and now render readable Korean. A separate 51-check review matches the complete archived source and actual browser/CSE/device evidence. See the [curated result](docs/assets/local-acceptance-20261116.json), [actual HTTP image](docs/assets/clean-http-dashboard.png), [mobile image](docs/assets/clean-https-mobile.png) and [STATUS](docs/STATUS.md).
+**Local MEC011 is now actually running and its CSE bridge passes seven checks.** User run 20261116-114543Z-372e392f builds the official Go component from reviewed backend 8c66f08e, starts healthy MEC/Redis/ACME containers and verifies actual HTTP discovery → CIN/read-back/SUB plus a reader write denial. The catalog currently contains zero registered services; risk-app registration/consumption, official IPE, manager-controlled app/VM placement and Option C remain unfinished. This is a separate local profile; the main dashboard is not silently labeled MEC-connected. See [LOCAL_MEC](docs/LOCAL_MEC.md) and [STATUS](docs/STATUS.md). Video remains outside the agent task.
+
+Earlier full-system checkpoint: published commit efc65cb passes `make verify-clean` — all 19 stages from a clean Git archive, zero unattempted steps and cleanup exit 0. Python 360/frontend 15/browser-driver 25 cases pass; actual CSE/Group/independent ACKs, faults/recovery, MQTT/discovery and HTTP/HTTPS Chrome all pass. Both browsers pass 20 checks and now render readable Korean. A separate 51-check review matches the complete archived source and actual browser/CSE/device evidence. See the [curated result](docs/assets/local-acceptance-20261116.json), [actual HTTP image](docs/assets/clean-http-dashboard.png), [mobile image](docs/assets/clean-https-mobile.png) and [STATUS](docs/STATUS.md).
 
 The separate [certificate-bound CSE profile](docs/SECURITY.md) also passes 11 actual checks on aa79ace, with an 18-check native-CSE/public-certificate review. It is separate from the 19-stage plan. Main-demo certificate migration, encrypted callbacks/MQTTS, actual MEC deployment/IPE, video recording and publication remain unfinished. Clean-source reproduction is verified on the recorded local host, not a remote CI or different-machine result.
 
@@ -11,7 +13,12 @@ The separate [certificate-bound CSE profile](docs/SECURITY.md) also passes 11 ac
 make p1-cse-security
 make cse-security-down
 
-# Requires an actual configured MEC011 endpoint; missing endpoint reports BLOCKED.
+# Build/start official local MEC011 + Redis + CSE and verify their actual integration.
+make p1-mec-local
+# Stop this separate stack while retaining data.
+make mec-local-down
+
+# External endpoint mode requires an actual configured MEC011 root.
 make mec-discover
 # Optional existing dedicated CNT: see DEPLOYMENT.md and .env.example.
 make mec-catalog-to-cse
