@@ -37,7 +37,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: real SUB → compute → route CIN → GRP/fopt → ACK; shared live incident/version.
 - Verify: T01–T07, T15, T18–T20 and integrated scenario.
 - Judge evidence: one correlated run spanning both roles, resource tree and error cases.
-- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor core and role HTTP/CSE gates pass, including 729-frame hazards/alternative/collapse/no-route/intentional incomplete delivery. Selected HTTP/HTTPS browsers each pass 20 assertions and correlate to actual CSE/device runs; font readability and a recorded hazard story still need review. Full application-process/partial-dispatch recovery and MEC remain open; no final scenario score is claimed.
+- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor core and role HTTP/CSE gates pass, including 729-frame hazards/alternative/collapse/no-route/intentional incomplete delivery. Clean efc65cb HTTP/HTTPS browsers each pass 20 assertions and correlate to actual CSE/device runs; sampled Korean text is readable. A recorded hazard story, full application-process/partial-dispatch recovery and MEC remain open; no final scenario score is claimed.
 
 ### 4. Quality of Article — selected
 
@@ -55,7 +55,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: readable capture, narration/audio, mode labels, captions and real-run backup.
 - Verify: P4 playback review, timestamps matched to real traces, no simulated-success presentation.
 - Judge evidence: submitted video, capture run IDs and storyboard in DEMO.md.
-- Current status: CAPTURE_TOOL_AND_SCRIPT_PREPARED; genuine Chrome screencast/optional FFmpeg tools and narration are in the repository. Actual user HTTP/HTTPS browser checks pass; inspected captures lack readable Hangul glyphs, which must be corrected before recording. No actual video/audio/editorial review or publication is claimed.
+- Current status: CAPTURE_TOOL_AND_SCRIPT_PREPARED; genuine Chrome screencast/optional FFmpeg tools and narration are in the repository. Actual clean HTTP/HTTPS browser checks pass and inspected Korean samples are readable. No actual video/audio/editorial review or publication is claimed; automatic capture covers baseline interaction/expiry, with late hazard/recovery story requiring separate genuine capture or labeled evidence replay.
 
 ### 6. Quality of Github — selected
 
@@ -64,7 +64,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: source, lockfiles, README, setup/test commands, CI, licenses, evidence index and article link.
 - Verify: new environment reproduction from the release commit; link/secret/license review.
 - Judge evidence: public repository/release URL, CI output and reproduction log.
-- Current status: PARTIAL: baseline ae6ac82 is committed; new serial/clean-commit tools and .node-version CI setup are implemented. Actual current-worktree acceptance passes all 19 stages, including T32/T33/T34. Reviewed commit/clean reproduction, remote GitHub CI/release and final article link remain unfinished. See LOCAL_ACCEPTANCE.md.
+- Current status: published efc65cb passes same-host clean-archive acceptance, all 19 stages including T32/T33/T34, zero unattempted/cleanup 0. A separate 51-check review matches archive/runtime/protocol evidence; curated result and actual readable screenshots are available. Remote GitHub CI/different-machine reproduction/release publication and final article link remain unverified. See LOCAL_ACCEPTANCE.md.
 
 ### 7. Promotion of oneM2M — supporting
 
@@ -91,7 +91,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Work: resource walkthrough, methodology/tradeoff notes, role-specific Q&A and rehearsal.
 - Verify: P4 peer interview covers resources, protocols, failure handling, MEC placement, simulation and benefits.
 - Judge evidence: presentation, diagrams and reproducible demo/answers; interview outcome belongs to judges.
-- Current status: EIGHT_SLIDE_LOCAL_DECK_AND_NARRATION_PREPARED at docs/submission/. Actual team interview/rehearsal is NOT_RUN; the deck distinguishes the verified local 19-stage/HTTP/HTTPS scope, remaining clean-reproduction/submission work and unavailable MEC.
+- Current status: EIGHT_SLIDE_LOCAL_DECK_AND_NARRATION_PREPARED at docs/submission/. Actual team interview/rehearsal is NOT_RUN; the deck distinguishes verified clean-source 19-stage/HTTP/HTTPS scope, remaining publication/submission work and unavailable MEC.
 
 ### 10. Security and Privacy — selected
 

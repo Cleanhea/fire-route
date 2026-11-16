@@ -62,3 +62,14 @@ The 19-stage worktree acceptance evidence/20261115-164139Z-e3f6e93b/ executes th
 | Public-status commit | 30 | 646.685 | 827.376 | 488.029 | 843.810 |
 
 Read-only acceptance review evidence/20261115-165511Z-77d52c9a/ independently recalculates both percentiles from the measured integer-nanosecond ticks and matches the original report/primary summary. This arithmetic review and the executed integration gate are distinct proof. The acceptance runtime/test manifest is 98388db705480e81fe497a65590770ad9d1da06a14e70bd06341a0cd72f5c647. Host utilization and comparable clock/environment uncertainty remain unmeasured; this was not a controlled optimization experiment. Do not combine runs into one percentile, redraw the original chart as this run, or claim the lower values prove a speedup/SLO, browser latency or MEC advantage. Preserve the same observer/E2E limitations above.
+
+## Clean-commit acceptance repeat — separate run
+
+Clean efc65cb acceptance evidence/20261116-044349Z-18300187/ runs the observer gate at .runtime/releases/20261116-044349Z-18300187/evidence/20261116-045034Z-9facd898/. All five warmups and 30 measured attempts complete, with no failed/incomplete/unattempted observations. Runtime/test manifest: 4d5319f108a3bc41a873cde03527a6cd9a6b0f1771d361fdbf0e5ec52817fd9d.
+
+| Observer metric | N | p50 (ms) | p95 (ms) |
+|---|---:|---:|---:|
+| Verified three-device ACKs | 30 | 568.133 | 793.534 |
+| Public-status commit | 30 | 661.692 | 863.187 |
+
+Separate read-only review evidence/20261116-045734Z-5454a876/ reproduces these nearest-rank statistics from raw integer ticks. The original CSV/figure and worktree repeat above remain unchanged and are not pooled with this run. Same-host clean-source reproduction does not make this a controlled speedup, physical E2E, browser, SLO or MEC benchmark. The [curated acceptance summary](assets/local-acceptance-20261116.json) includes this run's primary metric with those limits.
