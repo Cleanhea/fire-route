@@ -6,6 +6,8 @@ Latest scope: the user chose local completion on 2026-11-15. [LOCAL_ACCEPTANCE](
 
 Local implementation update, 2026-11-16: the user requested the remaining CSE/MEC work, then confirmed that no ETSI account/Sandbox/repository access is ready and selected local implementation first. No Hosted contact/deployment is performed. [SECURITY](SECURITY.md) documents the separate certificate-bound CSE gate. The following MEC011 adapter is prepared for an actual acquired endpoint; it does not install a local MEC platform or implement the official MEC-IPE.
 
+Subsequent actual security run: T36 passes 11 checks at evidence/20261116-040708Z-ba53f73b on pushed aa79ace; the gateway image was pulled and actual AE/CNT/CIN/SUB/ACP traffic and certificate negatives passed. This verifies the isolated topology described in SECURITY.md, with private HTTP on its backend/callback links. It does not supply a MEC installation, MN/IN registrar relationship, official IPE or main-demo certificate migration. Clean-commit/full-scenario reproduction is the next separate gate.
+
 ### Prepared MEC011 discovery and application-AE bridge
 
 Set the exact MEC_SERVICE_MGMT_URL ending in /mec_service_mgmt/v1 from the actual environment. MEC_ENVIRONMENT must be local-sandbox or hosted-sandbox. Optional MEC_APPLICATION_INSTANCE_ID must be the platform-assigned ID, never an invented deployment result. A private MEC_API_TOKEN_FILE and optional MEC_CA_FILE supply credentials/trust externally; Hosted or bearer-authenticated requests require HTTPS. Local/Hosted settings are independent of the default application's MEC_MODE=unavailable. No configured endpoint means BLOCKED without a network call.

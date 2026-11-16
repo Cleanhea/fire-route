@@ -82,7 +82,7 @@ def run():
                             settings.retention_seconds,decision_policies=True)
         evidence.write('resources.json',resources)
         clients={role:admin.for_actor(data['ae_id'],role) for role,data in resources['actors'].items()}
-        checks['eight_actual_AE_IDs_have_distinct_private_credentials']=len(clients)==8 and len({v['ae_id'] for v in resources['actors'].values()})==8
+        checks['eight_actual_AEs_have_distinct_IDs']=len(clients)==8 and len({v['ae_id'] for v in resources['actors'].values()})==8
         controller,sensor,resident=(clients[k] for k in ['controller','sensor','resident'])
         telemetry=resources['containers']['sensor/telemetry']['path']
         phase('ACTUAL_CIN_AND_SUBSCRIPTION')

@@ -2,7 +2,7 @@
 
 **FireRoute: Intelligent Fire Evacuation and Rescue Guidance System**
 
-Latest local implementation: an opt-in [certificate-bound CSE profile](docs/SECURITY.md), MEC011 discovery/application-AE catalog bridge, and private Korean fonts for Chrome are implemented. Python 360/browser-driver 25 cases pass; actual NGINX/CSE security, new rendered-font output and MEC endpoint integration still need their real gates. Baseline a66059f retains the earlier 19-stage actual acceptance; it does not verify later source changes. Git push and clean-commit execution are currently blocked in the agent environment. See [STATUS](docs/STATUS.md).
+Latest verified security checkpoint: the [certificate-bound CSE profile](docs/SECURITY.md) passes all 11 actual checks on ACME 2026.5.1/NGINX, with 48 real CSE exchanges, SUB verification/event, resident ACP denial and certificate/actor-spoofing rejection. A separate 18-check review verifies the actual CSE responses and eight distinct public certificate keys. The user pushed through aa79ace. The earlier 19-stage baseline remains separately recorded; new readable-font output, clean-commit reproduction and actual MEC endpoint/deployment/IPE remain unfinished. See [STATUS](docs/STATUS.md).
 
 ~~~bash
 # Actual isolated mTLS/AE-identity/ACP/CIN/SUB gate; normal demo stays separate.

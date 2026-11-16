@@ -2,7 +2,7 @@
 
 FireRoute is a simulation-based hackathon proof of concept exploring how IoT observations can produce coordinated evacuation guidance and separate resident and responder views. Its central question is not whether a browser can animate fire. It is whether an application can ingest an observation through an actual oneM2M CSE, compute a consistent decision, distribute it through a standard service, and independently verify which simulated devices applied it.
 
-This manuscript describes the verified local system. It has not been published to Hackster. Actual MEC deployment and service integration remain unverified; no edge-latency advantage is claimed. Recorded baseline a66059f passes all 19 local stages. Later optional certificate-bound CSE, MEC011 discovery/application-AE catalog and font preparation have unit/static checks but no new actual end-to-end PASS. Clean-commit reproduction, final editorial review and publication remain separate unfinished tasks.
+This manuscript describes the verified local system. It has not been published to Hackster. Actual MEC deployment and service integration remain unverified; no edge-latency advantage is claimed. Recorded baseline a66059f passes all 19 local stages. The separate certificate-bound CSE gate subsequently passes 11 actual checks on pushed aa79ace; an 18-check reviewer correlates native CSE traffic/callbacks and eight public certificates. Its backend/callback HTTP and main-scenario/MQTT migration remain explicit limits. MEC011 discovery/application-AE catalog and new font preparation still require actual endpoint/rendering verification. Clean-commit reproduction, final editorial review and publication remain unfinished.
 
 ## What the prototype contains
 

@@ -102,7 +102,7 @@ Current strategy: prioritize verified local operation/security/reproducibility (
 - Judge evidence: transport configuration/connection proof, ACP read-back and positive/negative outputs.
 - Current status: PARTIAL: actual scoped ACP denials and role API restrictions pass; T27 resolves the observed default-key warning for controlled local restart. T34 now passes eight actual checks with TLS 1.3, trusted CA/hostname, untrusted-CA rejection, role sessions/cookie flags/CSP; HTTPS Chrome also passes 20 checks. This secures browser-to-API transport, while CSE/MQTT actor identities remain header-based/anonymous. Full originator binding/TLS and an Expert award remain unproven.
 
-  New T36 implementation adds a separate certificate-bound CSE gateway and actor-specific verified TLS transport. Crypto/unit/static checks pass; the actual NGINX/CSE gate is Docker-BLOCKED and the normal demo/MQTT/callback paths are not migrated. Do not upgrade this row to verified CSE authentication or an Expert score before the real test passes.
+  T36 now passes all 11 actual isolated gateway/CSE checks, with an 18-check independent HTTP/callback/public-certificate review. It verifies certificate-bound actor requests and native ACP denial for that deployment. The normal demo/MQTT/callback paths are not migrated; full-system authentication and an Expert award are not inferred.
 
 ### 11. Data Interoperability and Discoverability — selected, tiered scope
 

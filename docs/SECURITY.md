@@ -1,6 +1,6 @@
 # Certificate-bound CSE security profile
 
-This opt-in profile places an NGINX mTLS gateway in front of the actual ACME CSE. It is not a replacement CSE. The existing demo and its volumes remain separate. Implementation and crypto/unit tests do not establish an actual gateway/CSE PASS; use the executed result in STATUS.md.
+This opt-in profile places an NGINX mTLS gateway in front of the actual ACME CSE. It is not a replacement CSE. The existing demo and its volumes remain separate. Actual T36 evidence/20261116-040708Z-ba53f73b/ now passes all 11 checks on source manifest f8aac0f7fc95f404a809cc529f6858c7e1ae709c081db1d26532bd830b095492, matching published aa79ace. Separate read-only review evidence/20261116-042739Z-0906daca/ passes 18 checks over 48 native CSE exchanges, two callbacks and eight public certificates. The boundaries below still apply; this is not a secure full-scenario or MEC result.
 
 ## Trust and request flow
 
@@ -29,8 +29,12 @@ The privileged test runner provisions eight actual AEs and their ACPs, issues ce
 - Client-to-gateway is mTLS; gateway-to-CSE and the private callback relay remain HTTP. This is not end-to-end encrypted callbacks or native ACME certificate authentication.
 - The main selected demo, MQTT broker and device processes are not silently migrated by this isolated gate. Existing real Group/ACK evidence stays on its original profile; rerun the affected full scenario before claiming secure Group/device operation.
 - This does not implement MQTT TLS/authentication, Mcc registrar security, application crash recovery or MEC deployment.
-- NGINX stable 1.30.6 is selected from its official release listing; nginx:1.30.6-alpine image availability/digest and installed behavior still require a successful real build/run.
+- nginx:1.30.6-alpine was pulled and used by the successful actual T36 run. An image digest/independent nginx -V snapshot was not retained, so those provenance fields remain unverified.
 
 Sources: [NGINX client-certificate verification and subject variables](https://nginx.org/en/docs/http/ngx_http_ssl_module.html), [official NGINX releases](https://nginx.org/en/download.html), [ACME authentication capabilities](https://acmecse.net/setup/Certificates/). ACME Basic/Bearer support alone must not be represented as binding an arbitrary X-M2M-Origin to the authenticated actor.
 
-Startup detail: the enrollment/listener container starts after the gateway. Its callback upstream is therefore resolved at request time rather than NGINX startup, using [Docker's documented embedded resolver](https://docs.docker.com/engine/network/#dns-services) and [NGINX variable proxy resolution](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass). This avoids a source-level DNS dependency cycle; actual startup/notification success still requires T36.
+Startup detail: the enrollment/listener container starts after the gateway. Its callback upstream is therefore resolved at request time rather than NGINX startup, using [Docker's documented embedded resolver](https://docs.docker.com/engine/network/#dns-services) and [NGINX variable proxy resolution](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass). The actual T36 run above now confirms startup and notification delivery for the recorded revision.
+
+Actual observations: T36 reaches COMPLETE, all 11 runtime predicates pass and runner/gateway/CSE exit 0; the supplied terminal includes CSE shutdown completion. Original saved assertions contain ten true values and one REDACTED value because its old name included credentials. The secret filter is unchanged. The separate reviewer derives eight distinct actual AE IDs and eight valid matching public-certificate subjects/keys without reading private keys. Future runs rename that predicate to eight_actual_AEs_have_distinct_IDs; the original artifact is never rewritten. Negative TLS results are original runner assertions/source-correlated proof, not an independent packet capture.
+
+NGINX warns about duplicate upstream Server identification headers (Werkzeug and ACME). It explicitly ignores the duplicate Server line. All 48 retained oneM2M request IDs/RSCs and the CIN CREATE/GET/SUB payload still match; no oneM2M corruption was observed. Upstream duplicate-header emission is a remaining logging issue. Warnings were not suppressed and no upstream CSE/proxy protocol behavior was changed to hide it.
