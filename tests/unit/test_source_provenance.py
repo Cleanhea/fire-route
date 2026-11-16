@@ -7,7 +7,7 @@ class SourceProvenanceTests(unittest.TestCase):
     def test_optional_transport_config_and_Dockerfiles_change_identity(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);(root/'infra').mkdir()
-            names=['compose.standards.yaml','compose.https.yaml','compose.mec-local.yaml','compose.mec-runtime.yaml','compose.mec-services.yaml','infra/mosquitto.conf','infra/core.Dockerfile']
+            names=['compose.standards.yaml','compose.https.yaml','compose.mec-local.yaml','compose.mec-runtime.yaml','compose.mec-services.yaml','infra/mosquitto.conf','infra/core.Dockerfile','infra/couch_health.sh']
             for name in names:(root/name).write_text('original')
             before=source_identity(root)
             self.assertEqual(set(before['source_files']),set(names))

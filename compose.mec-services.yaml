@@ -11,16 +11,17 @@ services:
     depends_on:
       mec-controller: {condition: service_healthy}
   mec-couch:
-    image: couchdb:3.5.2.1
+    build:
+      context: .
+      dockerfile: infra/mec/couch.Dockerfile
     env_file: [.runtime/mec-couch.env]
     networks:
       mec:
         aliases: [meep-couchdb-svc-couchdb.default.svc.cluster.local]
     volumes:
       - mec-couch-data:/opt/couchdb/data
-      - ./infra/mec/couch-single.ini:/opt/couchdb/etc/local.d/single.ini:ro
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:5984/_up"]
+      test: ["CMD", "/usr/local/bin/fire-route-couch-health"]
       interval: 3s
       timeout: 5s
       retries: 40

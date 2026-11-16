@@ -40,7 +40,7 @@ def source_identity(root: Path) -> dict:
     manifest = {}
     for directory in ("backend", "onem2m", "simulator", "mec", "infra", "tests", "frontend", "fixtures"):
         for p in sorted((root / directory).rglob("*")):
-            if p.is_file() and (p.name.endswith('Dockerfile') or p.suffix in {".py", ".ini", ".conf", ".txt", ".toml", ".yaml", ".yml", ".js", ".mjs", ".cjs", ".json", ".html", ".css"}):
+            if p.is_file() and (p.name.endswith('Dockerfile') or p.suffix in {".py", ".sh", ".ini", ".conf", ".txt", ".toml", ".yaml", ".yml", ".js", ".mjs", ".cjs", ".json", ".html", ".css"}):
                 manifest[str(p.relative_to(root))] = hashlib.sha256(p.read_bytes()).hexdigest()
     for name in ("compose.yaml", "compose.standards.yaml", "compose.https.yaml", "compose.cse-security.yaml", "compose.mec-local.yaml", "compose.mec-runtime.yaml", "compose.mec-services.yaml", "pyproject.toml", "Makefile", ".python-version", ".node-version"):
         p = root / name

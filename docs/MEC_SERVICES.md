@@ -1,6 +1,8 @@
 # Local FireRoute MEC service and project IPE
 
-This increment implements native app/service registration, an independent risk provider, project-specific oneM2M/MEC interworking and an optional authenticated dashboard. Actual Docker execution is still pending; implementation/unit results do not inherit the earlier seven-check component PASS. The upstream meep-ipe, MEC033/046, platform-controlled VM placement and Option C are not claimed.
+Startup follow-up: the user now completes the image pulls/builds, but CouchDB exits 1 before any pipeline gate. The host-owned read-only config bind is removed: a small image copies the same single-node setting with native ownership/mode and keeps the upstream entrypoint and named data volume. Its private /_up probe uses the image's existing Bash, without a curl dependency. Rerun make p1-mec-services; actual corrected startup is still pending.
+
+This increment implements native app/service registration, an independent risk provider, project-specific oneM2M/MEC interworking and an optional authenticated dashboard. The initial actual startup fails at CouchDB; corrected-image execution is pending. Implementation/unit results do not inherit the earlier seven-check component PASS. The upstream meep-ipe, MEC033/046, platform-controlled VM placement and Option C are not claimed.
 
 ~~~bash
 cd /home/lilkid/fire-evac/fire-route
