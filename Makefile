@@ -205,7 +205,7 @@ mec-services-down:
 	docker compose -p fire-route-mec-services -f compose.mec-services.yaml down
 
 mec-services-logs:
-	docker compose -p fire-route-mec-services -f compose.mec-services.yaml logs --tail=50 mec-controller mec-platform mec-risk mec-ipe mec-cse
+	docker compose -p fire-route-mec-services -f compose.mec-services.yaml logs --tail=50 mec-controller mec-platform mec-risk mec-occupancy mec-ipe mec-cse
 
 .PHONY: demo-mec-up p1-mec-dashboard
 demo-mec-up: access-codes mec-services-prepare

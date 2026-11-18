@@ -73,6 +73,24 @@ services:
       interval: 3s
       timeout: 5s
       retries: 50
+  # Second registered MEC service: access-event occupancy estimate (synthetic input only).
+  mec-occupancy:
+    init: true
+    build: {context: ., dockerfile: infra/core.Dockerfile}
+    entrypoint: ["python", "-m", "mec.occupancy.service"]
+    env_file: [.runtime/mec-risk.env]
+    environment: {EVIDENCE_ROOT: /app/evidence}
+    depends_on:
+      mec-platform: {condition: service_healthy}
+    networks: [mec]
+    volumes:
+      - mec-occupancy-state:/state
+      - ./evidence:/app/evidence
+    healthcheck:
+      test: ["CMD", "python", "-m", "infra.mec.service_health", "occupancy"]
+      interval: 3s
+      timeout: 5s
+      retries: 50
   mec-ipe:
     init: true
     stop_grace_period: 30s
@@ -83,6 +101,7 @@ services:
     depends_on:
       mec-cse: {condition: service_healthy}
       mec-risk: {condition: service_healthy}
+      mec-occupancy: {condition: service_healthy}
     networks: [mec, backend]
     volumes:
       - mec-ipe-state:/state
@@ -165,4 +184,5 @@ volumes:
   mec-couch-data:
   mec-influx-data:
   mec-risk-state:
+  mec-occupancy-state:
   mec-ipe-state:

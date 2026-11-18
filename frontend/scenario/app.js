@@ -1,6 +1,10 @@
-import {routeFor,timeLabel,selectedResident,freshPeople,rememberPeople,peoplePresentation,residentOptionsKey,mecLabel} from '/model.mjs';
+import {routeFor,timeLabel,selectedResident,freshPeople,rememberPeople,peoplePresentation,residentOptionsKey,mecLabel,zoneRouteFor,zoneSummary,roomOptions,estimatePresentation} from '/model.mjs';
 const $=id=>document.getElementById(id);
 let role=null,building=null,view=null,busy=false,incident=null,savedPeople=null,peopleKey=null;
+// The chosen room is a per-browser convenience only; it is never sent to the CSE.
+function readZone(){try{return localStorage.getItem('fr-my-zone')||'';}catch{return '';}}
+function storeZone(value){try{value?localStorage.setItem('fr-my-zone',value):localStorage.removeItem('fr-my-zone');}catch{}}
+let myZone=readZone();
 let movement={kind:'UNAVAILABLE',data:null};
 const labels={ROUTE_AVAILABLE:'계산 경로 있음',NO_VERIFIED_ROUTE:'확인된 경로 없음',PENDING:'대조 중',STALE:'관측 만료',UNKNOWN:'확인 불가'};
 function text(tag,value){const el=document.createElement(tag);el.textContent=value;return el;}
@@ -12,7 +16,14 @@ async function api(path,options={}){
 }
 function changeIncident(value){if(value!==incident){incident=value;savedPeople=null;peopleKey=null;$('person').value='';}}
 function login(){role=null;view=null;incident=null;savedPeople=null;peopleKey=null;render(null);$('app').hidden=true;$('login').hidden=false;}
-async function signed(value){role=value;incident=null;savedPeople=null;peopleKey=null;building=await api('/api/v1/building');render(null);$('login').hidden=true;$('app').hidden=false;for(const id of ['controls','private'])$(id).hidden=role!=='responder';$('moving-option').hidden=role!=='responder';$('mode').value='fixed';$('mode').dispatchEvent(new Event('change'));await poll();}
+function fillZones(){
+  const select=$('my-zone'),items=[select.options[0]];
+  for(const group of roomOptions(building)){const optgroup=document.createElement('optgroup');optgroup.label=group.floor+'층';for(const id of group.rooms){const option=text('option',id);option.value=id;optgroup.append(option);}items.push(optgroup);}
+  select.replaceChildren(...items);
+  if(!building.nodes.some(n=>n.id===myZone&&n.kind==='room')){myZone='';storeZone('');}
+  select.value=myZone;
+}
+async function signed(value){role=value;incident=null;savedPeople=null;peopleKey=null;building=await api('/api/v1/building');fillZones();render(null);$('login').hidden=true;$('app').hidden=false;for(const id of ['controls','private'])$(id).hidden=role!=='responder';$('moving-option').hidden=role!=='responder';$('mode').value='fixed';$('mode').dispatchEvent(new Event('change'));await poll();}
 function coords(node){
   if(node.kind==='roof')return [420,210];
   if(node.kind==='exit')return [node.id==='EXIT_A'?300:540,385];
@@ -25,9 +36,10 @@ function draw(){
   const floor=Number($('floor').value),nodes=building.nodes.filter(n=>n.floor===floor),meta=new Map(building.nodes.map(n=>[n.id,n]));
   const moving=$('mode').value==='moving',mapData=moving?movement.data:view;
   const person=selectedResident(movement.data,$('person').value);
-  const path=moving?(person?.target?[person.node,person.target]:[]):routeFor(view),selected=new Set(path),blocks=new Set(mapData?.hazards?.blocked_nodes||[]),levels=new Map((mapData?.hazards?.zones||[]).map(z=>[z.zone_id,z]));
+  const zonePath=zoneRouteFor(view,myZone);
+  const path=moving?(person?.target?[person.node,person.target]:[]):zonePath.length?zonePath:routeFor(view),selected=new Set(path),blocks=new Set(mapData?.hazards?.blocked_nodes||[]),levels=new Map((mapData?.hazards?.zones||[]).map(z=>[z.zone_id,z]));
   for(const edge of building.edges){const a=meta.get(edge.from),b=meta.get(edge.to);if(a.floor!==floor||b.floor!==floor)continue;const [x1,y1]=coords(a),[x2,y2]=coords(b);const active=path.some((n,i)=>i&&((path[i-1]===a.id&&n===b.id)||(path[i-1]===b.id&&n===a.id)));root.append(svg('line',{x1,y1,x2,y2,class:active?'edge active':'edge'}));}
-  for(const n of nodes){const [x,y]=coords(n),hazard=levels.get(n.id);const group=svg('g',{class:'node'+(blocks.has(n.id)?' blocked':selected.has(n.id)?' selected':hazard?.fire_index>0?' hazard':'')});group.append(svg('circle',{cx:x,cy:y,r:n.kind==='exit'?22:17}));const label=svg('text',{x,y:y+36,'text-anchor':'middle'});label.textContent=n.id;group.append(label);root.append(group);}
+  for(const n of nodes){const [x,y]=coords(n),hazard=levels.get(n.id);const group=svg('g',{class:'node'+(blocks.has(n.id)?' blocked':selected.has(n.id)?' selected':hazard?.fire_index>0?' hazard':'')+(!moving&&n.id===myZone?' origin':'')});group.append(svg('circle',{cx:x,cy:y,r:n.kind==='exit'?22:17}));const label=svg('text',{x,y:y+36,'text-anchor':'middle'});label.textContent=n.id;group.append(label);root.append(group);}
   if(moving){const p=person;const n=p&&meta.get(p.node);if(n?.floor===floor){let [x,y]=coords(n);const target=p.target&&meta.get(p.target);if(target?.floor===floor){const edge=building.edges.find(e=>(e.from===p.node&&e.to===p.target)||(e.to===p.node&&e.from===p.target));const [tx,ty]=coords(target);const ratio=edge?Math.min(1,p.progress_m/edge.length_m):0;x+=(tx-x)*ratio;y+=(ty-y)*ratio;}const dot=svg('circle',{cx:x,cy:y,r:9,class:'person'+(movement.kind==='HISTORICAL'?' historical':'')});const title=svg('title',{});title.textContent=movement.kind==='HISTORICAL'?'저장 당시 위치':'현재 모의 프레임의 위치';dot.append(title);root.append(dot);}}
 }
 function personDescription(){
@@ -44,8 +56,17 @@ function render(next){
   $('snapshot-note').hidden=role!=='responder';
   const stamp=people?.snapshot_at_utc||people?.observed_at_utc;
   $('snapshot-note').textContent=people?(movement.kind==='HISTORICAL'?'저장 기록 보기':'현재 프레임')+' · 모의 '+timeLabel(people.simulation_second)+(stamp?' · 저장 '+new Date(stamp).toLocaleString('ko-KR'):'')+(movement.kind==='HISTORICAL'?' · 인원 수와 파란 점은 저장 당시 기록입니다.':''):'주민 기록을 확인하고 있습니다. 시나리오 초기화 또는 CSE 연결 상태를 확인하세요.';
-  $('fixed-detail').replaceChildren(text('p','고정 출발점 '+(next?.fixed_origin||'F7-R3')),text('strong',path.length?next.route.target_exit:'방향 없음'));
-  $('path').replaceChildren(...path.map(n=>text('li',n)));
+  const zonePath=zoneRouteFor(next,myZone),zone=zoneSummary(next,myZone);
+  if(myZone)$('fixed-detail').replaceChildren(text('p','내 위치 '+myZone),text('strong',zonePath.length?next.zone_route.target_exit:'방향 없음'),text('p','고정 출발점 '+(next?.fixed_origin||'F7-R3')+' 안내: '+(path.length?next.route.target_exit:'방향 없음')));
+  else $('fixed-detail').replaceChildren(text('p','고정 출발점 '+(next?.fixed_origin||'F7-R3')),text('strong',path.length?next.route.target_exit:'방향 없음'));
+  $('zone-state').textContent=zone?zone.text:'';
+  if($('mode').value!=='moving')$('detail-title').textContent=myZone?'내 위치의 최신 안내':'고정 위치의 최신 안내';
+  $('path').replaceChildren(...(myZone?zonePath:path).map(n=>text('li',n)));
+  const estimate=estimatePresentation(next);$('estimate-summary').textContent=estimate.summary;
+  if(estimate.rows.length){const grid=text('table',''),top=text('tr','');for(const label of ['순위','구역','추정 인원','재실 확률','근거','마지막 감지','위험'])top.append(text('th',label));grid.append(top);
+    for(const row of estimate.rows){const tr=text('tr','');const chance=text('td',row.likelihood+' '+row.probability);chance.className='likely-'+row.level;tr.append(text('td',row.rank),text('td',row.zone),text('td',row.count),chance,text('td',row.basis),text('td',row.last),text('td',row.hazard));grid.append(tr);}
+    $('estimate-table').replaceChildren(grid);}
+  else $('estimate-table').replaceChildren(text('p',estimate.state==='ESTIMATED'?'재실 가능성이 있는 구역이 추정되지 않았습니다.':'표시할 추정이 없습니다.'));
   for(const [id,key] of [['total','total'],['evacuated','evacuated'],['remaining','remaining']])$(id).textContent=people?.population?people.population[key]:'UNKNOWN';$('queued').textContent=people?.population?(people.population.states.QUEUED||0):'UNKNOWN';
   const key=people?residentOptionsKey(people):null;
   if(key!==peopleKey||peopleKey===null){
@@ -59,7 +80,7 @@ function render(next){
 async function poll(){
   if(!role||busy)return;busy=true;
   try{const state=await api('/api/v1/status');changeIncident(state.incident_id);$('runtime').textContent=state.state+(state.paused?' · 일시정지':' · 자동 진행');for(const b of document.querySelectorAll('[data-action]'))b.disabled=state.busy;if(!incident){render(null);return;}
-    const current=await api(`/api/v1/incidents/${incident}/${role==='responder'?'responder':'resident'}`);
+    const current=await api(`/api/v1/incidents/${incident}/${role==='responder'?'responder':'resident'}${myZone?'/'+encodeURIComponent(myZone):''}`);
     if(role==='responder'){
       savedPeople=rememberPeople(savedPeople,current,incident);
       if(!freshPeople(current,incident)&&(!savedPeople||Number.isInteger(current.route_version)&&current.route_version>savedPeople.route_version)){
@@ -71,7 +92,8 @@ async function poll(){
   catch(error){render(error.body?.guidance_status?error.body:null);}finally{busy=false;}
 }
 for(let floor=1;floor<=11;floor++){const option=text('option',floor===11?'11층 옥상':floor+'층');option.value=String(floor);$('floor').append(option);}$('floor').value='7';$('floor').addEventListener('change',draw);
-$('mode').addEventListener('change',()=>{const moving=$('mode').value==='moving'&&role==='responder';$('fixed-detail').hidden=moving;$('moving-detail').hidden=!moving;$('path').hidden=moving;$('detail-title').textContent=moving?'가상 주민 이동':'고정 위치의 최신 안내';if(moving)$('person').dispatchEvent(new Event('change'));draw();});
+$('mode').addEventListener('change',()=>{const moving=$('mode').value==='moving'&&role==='responder';$('fixed-detail').hidden=moving;$('moving-detail').hidden=!moving;$('path').hidden=moving;$('zone-picker').hidden=moving;$('detail-title').textContent=moving?'가상 주민 이동':myZone?'내 위치의 최신 안내':'고정 위치의 최신 안내';if(moving)$('person').dispatchEvent(new Event('change'));draw();});
+$('my-zone').addEventListener('change',()=>{myZone=$('my-zone').value;storeZone(myZone);const n=building?.nodes.find(n=>n.id===myZone);if(n)$('floor').value=String(n.floor);render(null);poll();});
 $('person').addEventListener('change',()=>{const p=selectedResident(movement.data,$('person').value);$('person-state').textContent=personDescription();if(p){const n=building.nodes.find(n=>n.id===p.node);if(n)$('floor').value=String(n.floor);}draw();});
 $('login-form').addEventListener('submit',async event=>{event.preventDefault();try{const result=await api('/api/v1/session',{method:'POST',body:JSON.stringify({role:$('role').value,access_code:$('code').value})});$('code').value='';$('error').textContent='';await signed(result.role);}catch(error){$('error').textContent=error.message;}});
 $('logout').addEventListener('click',async()=>{try{await api('/api/v1/session',{method:'DELETE'});}finally{login();}});

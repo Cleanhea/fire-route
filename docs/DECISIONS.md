@@ -327,3 +327,29 @@ The optional port-3002 dashboard requires fresh source-correlated remote computa
 MEC_SERVICES.md defines interfaces and real commands. Unit/offline/static success remains separate from actual deployment proof. The agent's actual make attempt is denied at Docker access before build/start; no runtime PASS is fabricated. The Docker-capable user run is the remaining acceptance boundary; no new approval or ETSI account is required.
 
 ADR-028 startup correction: successful actual builds expose Couch exit 1 with empty logs before dependent services start. The version-specific upstream ownership pass can silently fail on the host-owned read-only INI. Package this nonsecret setting in a small same-version image with native ownership and writable image configuration; keep the original entrypoint and existing data volume. A small Bash status probe avoids another dependency/pull just for health checking. Add HTTP-status fixtures and include shell source in evidence identity. Do not reset volumes, change credentials or infer a new runtime PASS until the actual rerun. The official source explains the compatible fix; the exact installed-image error remains unavailable because logs are empty and inspect is denied.
+
+## ADR-029 — Access-event occupancy as a second registered MEC service; controller room guidance (IMPLEMENTED_UNVERIFIED)
+
+Context: the interim report (2026-10-13) made access-record occupancy on simulated data mandatory (UC-05) and put residents' own-location guidance in scope (1.2). Neither was implemented. Rubric #16 also lists multiple MEC services as unverified.
+
+Decision:
+- Generate anonymous passage events from the existing simulated residents, which stay the ground truth. Drop a declared, seeded 5% of passages.
+- Store the events as AccessGatewayAE CINs.
+- Have the project IPE, triggered by a request CIN that carries only references, RETRIEVE those CINs with its own ACP grant and call a second registered MEC service, `FireRoute Occupancy v1`.
+- The dashboard publishes a responder-only estimate after correlation, freshness and hash checks.
+- Room guidance is a controller-computed route table CIN from the same frame. It is deliberately not claimed as MEC output, so the verified risk-result contract is unchanged.
+- The occupancy journal retains the newest 32 incidents and caps one incident at 5,000 batches.
+
+Consequences:
+- More oneM2M use: two new AE roles' resources, label discovery, cross-AE RETRIEVE under ACP, a second SUB pair, and resident ACP exclusion. MEC: a second app/service registration and discovery.
+- Occupancy failure is isolated from route guidance and reported as UNKNOWN.
+- Offline replay shows that missed internal departures leave residue in POSSIBLE zones. The headline count therefore uses exit passages (registered − detected exits), and POSSIBLE zones rank after all HIGH zones.
+- Not claimed: person detection, Wi-Fi/BLE fusion (UC-06 probability correction), field accuracy, official meep-ipe, Option C.
+- Docker and actual-runtime gates are pending.
+
+ADR-029 addendum (UC-06):
+- Offline replay showed the access-only estimate leaves missed-departure residue that looks like presence.
+- Added a synthetic PresenceScannerAE (anonymous per-zone device counts every 10 s, declared carriage/detection/false rates) and replaced the staleness rule with a per-zone naive-Bayes probability: access-count prior updated by scans taken since the zone's last passage.
+- Effect in the same replay: HIGH-level precision rises (t=60 s: 23/38 → 23/23), and residue moves to LOW.
+- Trade-off: people without a detectable device can also become LOW. They stay listed when count-backed.
+- The IPE now retrieves both sensor CINs per reference; the provider journal stores aligned access+presence units.

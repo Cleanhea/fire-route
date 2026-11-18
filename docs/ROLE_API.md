@@ -18,6 +18,7 @@ API sessions use generated, separate role access codes, a hashed credential file
 | GET /api/v1/building | Authenticated preserved synthetic graph |
 | GET /api/v1/incidents/{id}/resident | Resident or responder; actual role-scoped CSE route/public-status reads only |
 | GET /api/v1/incidents/{id}/responder | Responder only; additional actual hazards/diagnostics/occupancy reads |
+| GET /api/v1/incidents/{id}/resident/{room} and /responder/{room} | Selected ten-floor profile only (F27). Same view plus zone_route for one room from the controller/zone-routes CIN of the same version; rooms only, unknown room 404, cleared when STALE. The room is a path parameter, never stored |
 | POST /api/v1/scenario | Responder only, same-origin JSON action: fire_a/fire_b/stop_display_c/reset/pause/resume |
 
 Resident response fields: schema_version, incident_id, route_version, guidance_status, approved route (source_node/target_exit/path) or null, delivery (state/ack_count/expected_ack_count), observed_at_utc, verified_at_utc, SYNTHETIC provenance, actual CSE connection result and MEC=UNAVAILABLE. No occupants, raw sensor diagnostics, device identities or private resource paths are exposed. Responder additionally receives bounded sensor/device/risk diagnostics and timestamped synthetic occupant counts; missing/old counts are null/UNKNOWN.

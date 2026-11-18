@@ -24,6 +24,32 @@ def decode_result(data):
     return Message(data['event_id'],data)
 
 
+def decode_occupancy_result(data):
+    if not isinstance(data,dict) or data.get('kind')!='FireRouteOccupancyResponse' or not isinstance(data.get('event_id'),str):
+        raise ValueError('Invalid project IPE occupancy response')
+    return Message(data['event_id'],data)
+
+
+def verified_estimate(reply,last,navigation):
+    """Only a fresh, correlated, hash-matching MEC estimate is usable; otherwise UNKNOWN."""
+    from mec.occupancy.estimator import validate_estimate
+    now=datetime.now(timezone.utc)
+    stamp=utc_time(last['timestamp_utc'])
+    estimate=reply.get('estimate')
+    if (reply.get('state')!='ACCEPTED' or not isinstance(estimate,dict)
+            or reply.get('source_event_id')!=last['event_id'] or reply.get('incident_id')!=last['incident_id']
+            or reply.get('sequence_to')!=last['sequence_to'] or reply.get('estimate_sha256')!=digest(estimate)
+            or estimate.get('incident_id')!=last['incident_id'] or estimate.get('applied_through_sequence')!=last['sequence_to']
+            or estimate.get('source_event_id')!=last['event_id']
+            or not isinstance(reply.get('service_id'),str) or not isinstance(reply.get('app_id'),str)
+            or not -5<=(now-stamp).total_seconds()<30
+            or not now<utc_time(reply['valid_until_utc'])<=stamp+timedelta(seconds=30)):
+        raise ProtocolError('No fresh correlated MEC occupancy estimate')
+    try:validate_estimate(estimate,navigation)
+    except ValueError as exc:raise ProtocolError('Invalid MEC occupancy estimate') from exc
+    return estimate
+
+
 def verified_result(reply,frame,local):
     now=datetime.now(timezone.utc)
     stamp=utc_time(frame['timestamp_utc'])
@@ -46,6 +72,7 @@ class Requester:
     def __init__(self,admin,connection,evidence,callback,port):
         self.admin,self.connection,self.evidence=admin,connection,evidence
         self.callback,self.port=callback,port;self.server=self.thread=None;self.subscription=None
+        self.occupancy_subscription=None
 
     def start(self):
         cb=probe(self.admin,'fire-route-dev')
@@ -66,6 +93,43 @@ class Requester:
         refs=subscription_refs(cb['csi'],self.results+'/'+name,sub)
         if not refs & self.inbox.verified_refs():raise ProtocolError('Actual MEC result SUB verification missing')
         service.approve(refs)
+        containers=self.connection['containers']
+        if 'occupancy-requests' in containers and 'occupancy-results' in containers:
+            self.occupancy_requests=containers['occupancy-requests']['path']
+            self.occupancy_results=containers['occupancy-results']['path']
+            name='observer-'+uuid4().hex[:12]
+            sub=self.reader.ensure(self.occupancy_results,23,{'rn':name,'nu':[self.callback],'enc':{'net':[3]},'nct':1,
+                                                              'lbl':['fire-route:ipe-observer',owner],'et':expiry})
+            self.occupancy_subscription={'path':self.occupancy_results+'/'+name,'ri':sub['ri'],'owner':owner,'callback':self.callback}
+            refs=subscription_refs(cb['csi'],self.occupancy_results+'/'+name,sub)
+            if not refs & self.inbox.verified_refs():raise ProtocolError('Actual MEC occupancy SUB verification missing')
+            service.approve(refs,decoder=decode_occupancy_result)
+
+    @property
+    def occupancy_enabled(self):
+        return self.occupancy_subscription is not None
+
+    def submit_occupancy(self,references):
+        """CIN request referencing access CINs -> IPE -> occupancy MEC service -> result CIN/SUB."""
+        if not self.occupancy_enabled:raise ProtocolError('Occupancy interworking unavailable')
+        request_id='occ-'+uuid4().hex
+        payload={'schema_version':1,'kind':'FireRouteOccupancyRequest','event_id':request_id,'batches':references}
+        made=self.producer.resource(self.producer.create(self.occupancy_requests,4,{'rn':request_id,'cnf':'application/json:0',
+            'con':json.dumps(payload,separators=(',',':'))}),4)
+        readback=self.producer.resource(self.producer.retrieve(self.occupancy_requests+'/'+request_id),4)
+        if made['ri']!=readback['ri'] or strict_json(readback['con'])!=payload:raise ProtocolError('MEC occupancy request CIN mismatch')
+        deadline=time.monotonic()+20
+        while not self.inbox.find(request_id) and time.monotonic()<deadline:time.sleep(.02)
+        rows=self.inbox.find(request_id)
+        if len(rows)!=1:raise ProtocolError('Matching real MEC occupancy SUB missing')
+        actual=self.reader.resource(self.reader.retrieve(self.occupancy_results+'/result-'+request_id),4)
+        result=strict_json(actual['con'])
+        if rows[0]['cin_ri']!=actual['ri'] or rows[0]['event']!=result:raise ProtocolError('MEC occupancy CIN/SUB mismatch')
+        if result.get('event_id')!=request_id:raise ProtocolError('MEC occupancy request/result correlation differs')
+        self.evidence.append('mec-occupancy.jsonl',{'request_id':request_id,'request_cin':made['ri'],
+            'result_cin':actual['ri'],'state':result.get('state'),'sequence_to':result.get('sequence_to'),
+            'service_id':result.get('service_id'),'estimate_sha256':result.get('estimate_sha256')})
+        return {**result,'request_cin':made['ri'],'result_cin':actual['ri']}
 
     def submit(self,frame):
         request_id='req-'+uuid4().hex
@@ -90,8 +154,9 @@ class Requester:
 
     def close(self):
         confirmed=True
-        if self.subscription:
-            try:remove_observer(self.admin,self.subscription)
+        for subscription in (self.subscription,self.occupancy_subscription):
+            if not subscription:continue
+            try:remove_observer(self.admin,subscription)
             except CSEError as exc:
                 confirmed=False
                 self.evidence.append('mec-observer-cleanup.jsonl',{'state':'UNCONFIRMED','reason':type(exc).__name__})

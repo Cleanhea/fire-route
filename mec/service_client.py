@@ -57,7 +57,16 @@ def actual_id(value):
     return value
 
 
+RISK_ENDPOINT='http://mec-risk:8081/v1/frames'
+OCCUPANCY_ENDPOINT='http://mec-occupancy:8082/v1/batches'
+OCCUPANCY_SERVICE='FireRoute Occupancy v1'
+
+
 def register_risk(controller, platform, name, *, saved=None, save=lambda value:None):
+    return register_service(controller,platform,name,RISK_ENDPOINT,saved=saved,save=save)
+
+
+def register_service(controller, platform, name, endpoint, *, saved=None, save=lambda value:None):
     """Use server-allocated IDs; no Redis access and no uncertain POST replay."""
     if saved is None:
         saved={'name':name,'app_create_attempted':True};save(saved)
@@ -97,11 +106,11 @@ def register_risk(controller, platform, name, *, saved=None, save=lambda value:N
             'scopeOfLocality':'MEC_SYSTEM','consumedLocalOnly':False,
             'transportInfo':{'id':'fire-route-http','name':'FireRoute authenticated JSON',
                 'type':'REST_HTTP','protocol':'HTTP','version':'1.1',
-                'endpoint':{'uris':['http://mec-risk:8081/v1/frames']},'security':{}}},expected=(201,))
+                'endpoint':{'uris':[endpoint]},'security':{}}},expected=(201,))
     elif len(matches)==1:info=matches[0]
     else:raise ServiceError()
     sid=actual_id(info.get('serInstanceId'))
-    if info.get('transportInfo',{}).get('endpoint',{}).get('uris')!=['http://mec-risk:8081/v1/frames']:
+    if info.get('transportInfo',{}).get('endpoint',{}).get('uris')!=[endpoint]:
         raise ServiceError()
     readback=platform.call('GET',path+'/'+sid)
     if readback!=info:raise ServiceError()
@@ -111,12 +120,16 @@ def register_risk(controller, platform, name, *, saved=None, save=lambda value:N
 
 
 def discover_risk(platform, name, service_id):
+    return discover_service(platform,name,service_id,RISK_ENDPOINT)
+
+
+def discover_service(platform, name, service_id, endpoint):
     catalog=platform.call('GET','/mec_service_mgmt/v1/services')
     if not isinstance(catalog,list) or any(not isinstance(s,dict) for s in catalog):raise ServiceError()
     found=[s for s in catalog if s.get('serName')==name and s.get('serInstanceId')==service_id]
     if len(found)!=1:raise ServiceError()
     item=found[0]
     if (item.get('state')!='ACTIVE' or item.get('serializer')!='JSON'
-            or item.get('transportInfo',{}).get('endpoint',{}).get('uris')!=['http://mec-risk:8081/v1/frames']):
+            or item.get('transportInfo',{}).get('endpoint',{}).get('uris')!=[endpoint]):
         raise ServiceError()
     return item

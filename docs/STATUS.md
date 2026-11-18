@@ -4,6 +4,16 @@ Updated: 2026-11-16. This is the single status file; no root STATUS.md is used.
 
 ## Current checkpoint
 
+**Access-event + Wi-Fi/BLE occupancy estimate (second MEC service) and resident room guidance (2026-11-19, IMPLEMENTED_UNVERIFIED, ADR-029).** PRD F26/F27 from the interim report UC-05, UC-06 and 1.2; design, offline comparison and limits are in MEC_SERVICES.md.
+
+- New code: AccessGatewayAE passage CINs and PresenceScannerAE device-count CINs (synthetic); Bayesian per-zone occupancy probability; project-IPE `occupancy-requests`/`occupancy-results` with SUB; IPE RETRIEVE of the referenced gateway CINs under its own ACP grant; registered `FireRoute Occupancy v1` (`mec-occupancy`); responder-only estimate publication with ground-truth comparison; resident-readable room route table; `/api/v1/incidents/{id}/{resident|responder}/{room}`; room picker and responder estimate card.
+- Verified on a Windows host without Docker, using an LF test mirror:
+  - Python units: 436 ran, including 29 new; no new failures. The 15 remaining errors are pre-existing Windows symlink/permission/path cases.
+  - Frontend logic: 19 pass, including 3 new.
+  - Offline replay of the 729 original frames through both sensors, the estimator and evaluation (numbers in MEC_SERVICES.md).
+- NOT_RUN: Docker build/start of `mec-occupancy`, actual CSE/IPE/MEC occupancy path, 12-check E2E and 20-check dashboard reruns, 3002 browser rendering.
+- Owner/next: run `make p1-mec-services` then `make demo-mec-up` on the WSL2 Docker host and fix the first concrete failure.
+
 **CouchDB startup follow-up (2026-11-16).** User make p1-mec-services at source preparation evidence/20261116-125510Z-92ee97e7 completes both new image pulls and all five component/controller/provider/IPE/CSE builds. Actual docker ps observes new Redis/Influx/CSE healthy, CouchDB exited 1 and controller/platform/provider/IPE still Created; registration and E2E gates have not run. The user reports an empty CouchDB log. This supersedes the earlier agent-only build blocker for those recorded builds, without claiming pipeline success.
 
 The pinned-version upstream entrypoint uses set -e and find -exec chown -f ... + under /opt/couchdb; the host-owned read-only config bind is incompatible with that normalization. A suppressed ownership failure can explain exit 1 without a log. This is a source-supported diagnosis, not an independently captured installed-image syscall/error. Replace that bind with a tiny image based on the same couchdb:3.5.2.1, copying the config as UID/GID 5984 and mode 0644 before the writable docker.ini in the configuration chain. Keep its native entrypoint and existing named data volume. Add a bounded Bash /_up HTTP-status probe rather than depending on an unverified curl binary. Shell source is now included in runtime identity. Focused health fixtures and Compose checks are executed; actual corrected-image startup remains pending Docker-capable execution. No volume reset, key change, Hosted request or existing-profile lifecycle change occurs.

@@ -58,11 +58,18 @@ def api_server(host,port,app,auth,origin,static_root:Path,*,actions=None,snapsho
             if path=='/api/v1/building':return self.send(200,app.building)
             parts=path.split('/')
             endpoints={'resident','responder'}|({'snapshot'} if snapshots else set())
-            if len(parts)!=6 or parts[1:4]!=['api','v1','incidents'] or parts[5] not in endpoints:
+            # Optional /{zone}: a resident-chosen room for personal guidance (rooms only).
+            zones=getattr(app,'zone_ids',None)
+            zone=parts[6] if len(parts)==7 and zones is not None and parts[5] in {'resident','responder'} else None
+            if (len(parts) not in {6,7} or len(parts)==7 and zone is None
+                    or parts[1:4]!=['api','v1','incidents'] or parts[5] not in endpoints):
                 return self.send(404,{'error':'NOT_FOUND'})
             if parts[5] in {'responder','snapshot'} and role!='responder':return self.send(403,{'error':'ROLE_DENIED'})
+            if zone is not None and zone not in zones:return self.send(404,{'error':'ZONE_NOT_FOUND'})
             try:
-                result=app.snapshot(parts[4],role) if parts[5]=='snapshot' else app.view(parts[4],role,diagnostics=parts[5]=='responder')
+                if parts[5]=='snapshot':result=app.snapshot(parts[4],role)
+                elif zone is not None:result=app.view(parts[4],role,diagnostics=parts[5]=='responder',zone=zone)
+                else:result=app.view(parts[4],role,diagnostics=parts[5]=='responder')
                 return self.send(200,result)
             except LookupError:return self.send(404,{'error':'INCIDENT_NOT_FOUND'})
             except (CSEError,ValueError,KeyError,TypeError):

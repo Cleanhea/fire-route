@@ -18,11 +18,23 @@ from uuid import uuid4
 from backend.evidence import Evidence, source_identity
 from backend.notifications import NotificationService, NotificationStore, notification_server
 from backend.p0 import probe, subscription_refs
+from mec.occupancy.estimator import validate_estimate
+from mec.occupancy.service import fresh_batch, parse_unit
+from mec.risk.evacuation import Navigation
 from mec.risk.service import fresh
-from mec.service_client import LocalHTTP, ServiceError, discover_risk
-from onem2m.client import CSEClient, CSEError, ProtocolError, strict_json
+from mec.service_client import LocalHTTP, OCCUPANCY_ENDPOINT, OCCUPANCY_SERVICE, ServiceError, discover_risk, discover_service
+from onem2m.client import CSEClient, CSEError, ProtocolError, TransportError, strict_json
 from simulator.commands import utc_time
 from simulator.scenario_frames import ScenarioFrame, source_manifest
+
+NAVIGATION = Navigation()
+REFERENCE_FIELDS = {'path','ri','content_sha256','event_id','incident_id','sequence_from','sequence_to','timestamp_utc','presence'}
+
+
+def cin_reference(value):
+    return (isinstance(value,dict) and set(value)=={'path','ri','content_sha256'}
+            and all(isinstance(value[k],str) and value[k] and len(value[k])<=512 for k in ('path','ri'))
+            and value['path'].startswith('/') and bool(re.fullmatch('[0-9a-f]{64}',str(value['content_sha256']))))
 
 
 def digest(value):
@@ -46,6 +58,29 @@ def decode_request(data):
     return Message(data['event_id'],data)
 
 
+def decode_occupancy_request(data):
+    """References to actual access-gateway CINs; the IPE retrieves their content itself."""
+    if (not isinstance(data,dict) or set(data)!={'schema_version','kind','event_id','batches'}
+            or type(data['schema_version']) is not int or data['schema_version']!=1
+            or data['kind']!='FireRouteOccupancyRequest'
+            or not isinstance(data['event_id'],str) or not re.fullmatch('occ-[0-9a-f]{32}',data['event_id'])
+            or not isinstance(data['batches'],list) or not 1<=len(data['batches'])<=64):
+        raise ValueError('INVALID_OCCUPANCY_REQUEST')
+    previous=None
+    for ref in data['batches']:
+        if (not isinstance(ref,dict) or set(ref)!=REFERENCE_FIELDS
+                or any(not isinstance(ref[k],str) or not ref[k] or len(ref[k])>512 for k in ('event_id','incident_id','timestamp_utc'))
+                or not cin_reference({k:ref[k] for k in ('path','ri','content_sha256')}) or not cin_reference(ref['presence'])
+                or any(type(ref[k]) is not int or ref[k]<1 for k in ('sequence_from','sequence_to'))
+                or ref['sequence_from']>ref['sequence_to']):
+            raise ValueError('INVALID_OCCUPANCY_REFERENCE')
+        if previous and (ref['incident_id']!=previous['incident_id'] or ref['sequence_from']!=previous['sequence_to']+1):
+            raise ValueError('NONCONSECUTIVE_OCCUPANCY_REFERENCES')
+        previous=ref
+    utc_time(previous['timestamp_utc'])
+    return Message(data['event_id'],data)
+
+
 def provision(admin, base, namespace):
     parent='/'+base;labels=['fire-route','namespace:'+namespace,'fire-route:project-ipe-v1']
     actors={}
@@ -56,7 +91,8 @@ def provision(admin, base, namespace):
         actors[role]={'ae_id':ae['aei'],'ri':ae['ri'],'path':parent+'/'+name}
     if len({a['ae_id'] for a in actors.values()})!=3:raise ProtocolError('Distinct IPE actors required')
     containers={}
-    for kind,writer,reader in [('requests','producer','ipe'),('results','ipe','reader')]:
+    for kind,writer,reader in [('requests','producer','ipe'),('results','ipe','reader'),
+                               ('occupancy-requests','producer','ipe'),('occupancy-results','ipe','reader')]:
         rules=[{'acor':[actors[writer]['ae_id']],'acop':3},
                {'acor':[actors[reader]['ae_id']],'acop':2},
                {'acor':[actors[reader]['ae_id']],'acop':1,'acod':[{'ty':3,'chty':[23]}]},
@@ -98,6 +134,61 @@ def analyse(document, platform, provider, registration):
     return result
 
 
+def retrieve_verified(client, ref):
+    cin=client.resource(client.retrieve(ref['path']),4)
+    content=strict_json(cin['con']) if isinstance(cin['con'],str) else cin['con']
+    if cin['ri']!=ref['ri'] or digest(content)!=ref['content_sha256']:
+        raise ServiceError()
+    return content
+
+
+def resolve_batches(document, client):
+    """Retrieve each referenced access and presence-scan CIN with the IPE's own ACP grant and verify them."""
+    units=[]
+    for ref in document['batches']:
+        unit=parse_unit({'access':retrieve_verified(client,ref),'presence':retrieve_verified(client,ref['presence'])},NAVIGATION)
+        if any(unit['access'][k]!=ref[k] for k in ('event_id','incident_id','sequence_from','sequence_to','timestamp_utc')):
+            raise ServiceError()
+        units.append(unit)
+    return units
+
+
+def analyse_occupancy(document, client, platform, provider, cache):
+    last=document['batches'][-1]
+    result={'schema_version':1,'kind':'FireRouteOccupancyResponse','event_id':document['event_id'],
+        'source_event_id':last['event_id'],'incident_id':last['incident_id'],'sequence_to':last['sequence_to'],
+        'timestamp_utc':last['timestamp_utc'],'state':'UNKNOWN','estimate':None,
+        'interworking':'FIREROUTE_PROJECT_IPE_V1','provenance':'ASSUMED_NOT_CALIBRATED'}
+    try:
+        batches=resolve_batches(document,client)
+        fresh_batch(batches[-1]['access'])
+        registration=cache.get('registration')
+        if registration is None:
+            registration=provider.call('GET','/health').get('registration')
+            if not isinstance(registration,dict) or not registration.get('service_id') or not registration.get('app_id'):
+                raise ServiceError()
+            cache['registration']=registration
+        item=discover_service(platform,OCCUPANCY_SERVICE,registration['service_id'],OCCUPANCY_ENDPOINT)
+        reply=provider.call('POST','/v1/batches',{'batches':batches})
+        estimate=reply.get('estimate')
+        if (reply.get('state')!='ACCEPTED' or not isinstance(estimate,dict)
+                or estimate.get('incident_id')!=last['incident_id']
+                or estimate.get('applied_through_sequence')!=last['sequence_to']
+                or estimate.get('source_event_id')!=last['event_id']):
+            raise ServiceError()
+        validate_estimate(estimate,NAVIGATION)
+        fresh_batch(batches[-1]['access'])  # A slow estimate cannot revive expired input.
+        expires=utc_time(last['timestamp_utc'])+timedelta(seconds=30)
+        result.update(state='ACCEPTED',estimate=estimate,estimate_sha256=digest(estimate),
+            service_id=item['serInstanceId'],app_id=registration['app_id'],
+            valid_until_utc=expires.isoformat().replace('+00:00','Z'))
+    except TransportError:
+        raise  # CSE unreachable: leave the request unprocessed for the next loop.
+    except (ServiceError,ValueError,KeyError,TypeError,CSEError):
+        result['reason']='SERVICE_UNAVAILABLE_INVALID_OR_EXPIRED'
+    return result
+
+
 class Outbox:
     def __init__(self,path):
         self.path=path
@@ -120,8 +211,11 @@ class Outbox:
             payload=strict_json(row[1]);path=parent+'/'+name
             if (row[2]=='PREPARED' and payload.get('state')=='ACCEPTED'
                     and datetime.now(timezone.utc)>=utc_time(payload['valid_until_utc'])):
-                payload.update(state='UNKNOWN',guidance_status='UNKNOWN',analysis=None,route=None,
-                               reason='RESULT_EXPIRED_BEFORE_CSE_PUBLISH')
+                if payload.get('kind')=='FireRouteOccupancyResponse':
+                    payload.update(state='UNKNOWN',estimate=None,reason='RESULT_EXPIRED_BEFORE_CSE_PUBLISH')
+                else:
+                    payload.update(state='UNKNOWN',guidance_status='UNKNOWN',analysis=None,route=None,
+                                   reason='RESULT_EXPIRED_BEFORE_CSE_PUBLISH')
                 db.execute('UPDATE output SET payload=? WHERE id=?',(json.dumps(payload,sort_keys=True),identity));db.commit()
             try:
                 actual=client.resource(client.retrieve(path),4)
@@ -164,6 +258,14 @@ def main():
         refs=subscription_refs(cb['csi'],req+'/risk-sub',sub)
         if not refs & inbox.verified_refs():raise ProtocolError('Actual IPE SUB verification missing')
         service.approve(refs)
+        occ=resources['containers']['occupancy-requests']['path']
+        occ_sub=actor.ensure(occ,23,{'rn':'occupancy-sub','nu':['http://mec-ipe:8000/onem2m/notify'],'enc':{'net':[3]},'nct':1})
+        occ_refs=subscription_refs(cb['csi'],occ+'/occupancy-sub',occ_sub)
+        if not occ_refs & inbox.verified_refs():raise ProtocolError('Actual occupancy IPE SUB verification missing')
+        service.approve(occ_refs,decoder=decode_occupancy_request)
+        occupancy=LocalHTTP('http://mec-occupancy:8082',aliases=('mec-occupancy',),evidence=ev,
+                            access_key=os.environ.get('FR_RISK_ACCESS_KEY'))
+        occupancy_cache={}
         provider=LocalHTTP('http://mec-risk:8081',aliases=('mec-risk',),evidence=ev,
                            access_key=os.environ.get('FR_RISK_ACCESS_KEY'))
         platform=LocalHTTP('http://mec-platform',aliases=('mec-platform',),evidence=ev)
@@ -180,6 +282,11 @@ def main():
             try:
                 for row in inbox.records():
                     if row['event']['event_id'] in outbox.completed:continue
+                    if row['event'].get('kind')=='FireRouteOccupancyRequest':
+                        # Isolated from risk: an occupancy failure yields UNKNOWN estimates only.
+                        outbox.process(row['event'],lambda doc:analyse_occupancy(doc,actor,platform,occupancy,occupancy_cache),
+                                       actor,resources['containers']['occupancy-results']['path'])
+                        continue
                     outbox.process(row['event'],lambda doc:analyse(doc,platform,provider,registration),actor,
                                    resources['containers']['results']['path'])
                 heartbeat=state/'heartbeat.tmp';heartbeat.write_text(str(time.time()));heartbeat.replace(state/'heartbeat')
